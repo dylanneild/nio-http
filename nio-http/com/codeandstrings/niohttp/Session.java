@@ -1,6 +1,7 @@
 package com.codeandstrings.niohttp;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
@@ -8,13 +9,15 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 
+import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
-import com.codeandstrings.niohttp.exceptions.http.InternalServerErrorException;
 import com.codeandstrings.niohttp.exceptions.http.RequestEntityTooLargeException;
 import com.codeandstrings.niohttp.handlers.RequestHandler;
+import com.codeandstrings.niohttp.handlers.StringRequestHandler;
 import com.codeandstrings.niohttp.response.BufferContainer;
 import com.codeandstrings.niohttp.response.ExceptionResponseFactory;
 import com.codeandstrings.niohttp.response.Response;
+import com.codeandstrings.niohttp.response.ResponseFactory;
 
 class Session$Line {
 
@@ -66,7 +69,8 @@ public class Session {
 	 * @param channel
 	 * @param selector
 	 */
-	public Session(SocketChannel channel, Selector selector, RequestHandler handler) {
+	public Session(SocketChannel channel, Selector selector,
+			RequestHandler handler) {
 		this.channel = channel;
 		this.selector = selector;
 		this.maxRequestSize = IdealBlockSize.VALUE;
@@ -87,7 +91,29 @@ public class Session {
 		return this.channel;
 	}
 
-	private void analyze() throws HttpException {
+	private void handleRequest(Request r) throws IOException {
+
+		if (this.requestHandler instanceof StringRequestHandler) {
+
+			StringRequestHandler casted = (StringRequestHandler) this.requestHandler;
+			
+			Response response = ResponseFactory.createResponse(
+					casted.handleRequest(r), casted.getContentType(),
+					r.getRequestProtocol());
+			
+			if (r.getRequestProtocol() == HttpProtocol.HTTP1_0) {
+				this.outputQueue.add(new BufferContainer(response.getByteBuffer(), true));
+			} else {
+				this.outputQueue.add(new BufferContainer(response.getByteBuffer(), false));
+			}
+			
+			this.socketWriteEvent();
+
+		}
+
+	}
+
+	private void analyze() throws HttpException, IOException {
 
 		if (this.requestHeaderLines.size() == 0)
 			return;
@@ -96,6 +122,15 @@ public class Session {
 
 		for (Session$Line sessionLine : this.requestHeaderLines) {
 			headerFactory.addLine(sessionLine.line);
+		}
+
+		if (headerFactory.shouldBuildRequestHeader()) {
+			
+			InetSocketAddress remote = (InetSocketAddress)this.channel.getRemoteAddress();
+						
+			Request r = Request.generateRequest(remote.getHostString(), headerFactory.build());
+			this.handleRequest(r);
+			this.reset();
 		}
 
 	}
@@ -132,12 +167,12 @@ public class Session {
 	}
 
 	private void closeChannel() throws IOException {
-	
+
 		System.err.println("Connection closed " + this.channel);
 		this.channel.close();
 
 	}
-	
+
 	private void setSelectionRequest(boolean write)
 			throws ClosedChannelException {
 
@@ -155,28 +190,27 @@ public class Session {
 	public void socketWriteEvent() throws IOException {
 
 		boolean closedConnection = false;
-		
+
 		if (this.outputQueue.size() > 0) {
-			
+
 			BufferContainer container = this.outputQueue.remove(0);
-			
+
 			this.channel.write(container.getBuffer());
-			
+
 			// kill the connection?
 			if (container.isCloseOnTransmission()) {
-				this.closeChannel();	
+				this.closeChannel();
 				closedConnection = true;
 			}
 		}
-		
+
 		if (this.outputQueue.size() == 0 && !closedConnection) {
 			this.setSelectionRequest(false);
 		}
 
 	}
 
-	private void generateResponseException(HttpException e)
-			throws IOException {
+	private void generateResponseException(HttpException e) throws IOException {
 
 		Response r = (new ExceptionResponseFactory(e)).create();
 		this.outputQueue.add(new BufferContainer(r.getByteBuffer(), true));
@@ -189,6 +223,12 @@ public class Session {
 
 		try {
 			this.readBuffer.clear();
+			
+			if (!this.channel.isConnected() || !this.channel.isOpen()) {
+				System.out.println("This connection is now closed.");
+				return;
+			}
+			
 			int bytesRead = this.channel.read(this.readBuffer);
 
 			if (bytesRead == -1) {
@@ -216,7 +256,7 @@ public class Session {
 
 			}
 		} catch (IOException e) {
-			generateResponseException(new InternalServerErrorException());
+			this.closeChannel();
 		} catch (HttpException e) {
 			generateResponseException(e);
 		}

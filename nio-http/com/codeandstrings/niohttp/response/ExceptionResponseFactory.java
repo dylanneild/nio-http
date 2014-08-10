@@ -1,5 +1,6 @@
 package com.codeandstrings.niohttp.response;
 
+import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
 
 public class ExceptionResponseFactory {
@@ -13,7 +14,7 @@ public class ExceptionResponseFactory {
 	
 	public Response create() {
 		
-		Response r = new Response();
+		Response r = new Response(HttpProtocol.HTTP1_1);
 		
 		r.setCode(this.e.getCode());
 		r.setDescription(this.e.getDescription());

@@ -18,7 +18,12 @@ public class Debug {
 
 			@Override
 			public String handleRequest(Request request) {
-				return "Here is your data.";
+				
+				return "Thanks for connecting from " + request.getRemoteAddr();
+				
+				// return "Here is your data:<br><br> Debugging for your request: " + request.toString();
+				
+				
 			}
 			
 		};	
