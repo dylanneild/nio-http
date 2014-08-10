@@ -18,6 +18,17 @@ Functional for basic text requests via a StringRequestHandler (see example below
 
 File stream responses are not yet implemented and non-GET/HEAD responses and are not tested (POST) or not implemented (PUT, DELETE, etc).
 
+### Roadmap
+
+* Add IP bind support to server; currently server binds to *:port (all addresses)
+* Finish HTTP POST support.
+* Upgrade session system to support request bodies.
+* Upgrade request object to include POST or GET parameter block.
+* Add and test a file response object (return a file object as a response)
+* Update Server object to support multiple handlers, mounted by URI, including wildcards.
+* Update Server object to support default URI's.
+* Update exceptions to support bodies
+
 ### Example Server
 
 http://sky.codeandstrings.com
