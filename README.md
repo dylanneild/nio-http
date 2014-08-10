@@ -14,9 +14,9 @@ Sure! Please place any pull requests against the devel branch.
 
 ### Current Status
 
-Functional for basic text requests via a StringRequestHandler (see example below) - using GET requests over HTTP/1.0 and HTTP/1.1.
+Functional for basic text requests via a StringRequestHandler (see example below) - using GET and HEAD requests over HTTP/1.0 and HTTP/1.1.
 
-File stream responses are not yet implemented and non-GET responses and are not tested (POST) or not implemented (HEAD, etc).
+File stream responses are not yet implemented and non-GET/HEAD responses and are not tested (POST) or not implemented (PUT, DELETE, etc).
 
 ### Example Server
 

@@ -1,8 +1,9 @@
 package com.codeandstrings.niohttp.handlers;
 
-import com.codeandstrings.niohttp.Request;
+import com.codeandstrings.niohttp.exceptions.http.HttpException;
+import com.codeandstrings.niohttp.request.Request;
 
 public abstract class StringRequestHandler implements RequestHandler {
 	public abstract String getContentType();
-	public abstract String handleRequest(Request request);	
+	public abstract String handleRequest(Request request) throws HttpException;	
 }

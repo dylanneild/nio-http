@@ -1,18 +1,29 @@
-package com.codeandstrings.niohttp;
+package com.codeandstrings.niohttp.data;
 
 public class Parameters {
 
 	private int port;
+	private String serverString;
 
 	public static Parameters getDefaultParameters() {
-		
+
 		Parameters r = new Parameters();
-		r.setPort(8888);
-		
+
+		r.port = 8888;
+		r.serverString = "Java-NIO";
+
 		return r;
-		
+
 	}
-	
+
+	public String getServerString() {
+		return serverString;
+	}
+
+	public void setServerString(String serverString) {
+		this.serverString = serverString;
+	}
+
 	public int getPort() {
 		return port;
 	}
@@ -23,7 +34,8 @@ public class Parameters {
 
 	@Override
 	public String toString() {
-		return "Parameters [port=" + port + "]";
+		return "Parameters [port=" + port + ", serverString=" + serverString
+				+ "]";
 	}
 
 	@Override
@@ -31,6 +43,8 @@ public class Parameters {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + port;
+		result = prime * result
+				+ ((serverString == null) ? 0 : serverString.hashCode());
 		return result;
 	}
 
@@ -44,6 +58,11 @@ public class Parameters {
 			return false;
 		Parameters other = (Parameters) obj;
 		if (port != other.port)
+			return false;
+		if (serverString == null) {
+			if (other.serverString != null)
+				return false;
+		} else if (!serverString.equals(other.serverString))
 			return false;
 		return true;
 	}

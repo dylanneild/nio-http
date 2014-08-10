@@ -1,4 +1,4 @@
-package com.codeandstrings.niohttp;
+package com.codeandstrings.niohttp.request;
 
 import java.net.URI;
 
@@ -8,14 +8,23 @@ import com.codeandstrings.niohttp.enums.RequestMethod;
 public class Request {
 
 	private String remoteAddr;
+	private int remotePort;
 	private RequestHeader header = null;
 
-	public static Request generateRequest(String remoteAddr,
+	public static Request generateRequest(String remoteAddr, int remotePort,
 			RequestHeader header) {
+
 		Request r = new Request();
+
 		r.remoteAddr = remoteAddr;
+		r.remotePort = remotePort;
 		r.header = header;
+
 		return r;
+	}
+
+	public int getRemotePort() {
+		return remotePort;
 	}
 
 	public String getRemoteAddr() {
@@ -36,7 +45,8 @@ public class Request {
 
 	@Override
 	public String toString() {
-		return "Request [remoteAddr=" + remoteAddr + ", header=" + header + "]";
+		return "Request [remoteAddr=" + remoteAddr + ", remotePort="
+				+ remotePort + ", header=" + header + "]";
 	}
 
 	@Override
@@ -46,6 +56,7 @@ public class Request {
 		result = prime * result + ((header == null) ? 0 : header.hashCode());
 		result = prime * result
 				+ ((remoteAddr == null) ? 0 : remoteAddr.hashCode());
+		result = prime * result + remotePort;
 		return result;
 	}
 
@@ -67,6 +78,8 @@ public class Request {
 			if (other.remoteAddr != null)
 				return false;
 		} else if (!remoteAddr.equals(other.remoteAddr))
+			return false;
+		if (remotePort != other.remotePort)
 			return false;
 		return true;
 	}

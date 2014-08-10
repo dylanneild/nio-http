@@ -9,6 +9,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 
+import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.handlers.RequestHandler;
 
 public class Server implements Runnable {
@@ -21,7 +22,7 @@ public class Server implements Runnable {
 	public Server() {
 		this.parameters = Parameters.getDefaultParameters();
 	}
-	
+
 	public Parameters getParameters() {
 		return parameters;
 	}
@@ -33,7 +34,7 @@ public class Server implements Runnable {
 	private void configureSocketAddress() {
 		this.socketAddress = new InetSocketAddress(this.parameters.getPort());
 	}
-	
+
 	public void setRequestHandler(RequestHandler requestHandler) {
 		this.requestHandler = requestHandler;
 	}
@@ -73,10 +74,12 @@ public class Server implements Runnable {
 					if (key.isAcceptable()) {
 
 						/*
-						 * Accept a connection register it as non-blocking and part of
-						 * the master selector's selection chain (for OP_READ functions).
+						 * Accept a connection register it as non-blocking and
+						 * part of the master selector's selection chain (for
+						 * OP_READ functions).
 						 */
-						SocketChannel connection = ((ServerSocketChannel) key.channel()).accept();
+						SocketChannel connection = ((ServerSocketChannel) key
+								.channel()).accept();
 						connection.configureBlocking(false);
 						connection.register(selector, SelectionKey.OP_READ);
 
@@ -86,35 +89,43 @@ public class Server implements Runnable {
 
 						SelectableChannel channel = key.channel();
 						Session session = (Session) key.attachment();
-						
+
 						if (channel instanceof SocketChannel) {
 							if (session == null) {
 								/*
-								 * The selector has triggered because a socket has generated a read
-								 * event and there is presently no session available to handle it.
-								 * Make a new one and ask it to handle the session.
+								 * The selector has triggered because a socket
+								 * has generated a read event and there is
+								 * presently no session available to handle it.
+								 * Make a new one and ask it to handle the
+								 * session.
 								 */
-								session = new Session((SocketChannel)channel, selector, this.requestHandler);
+								session = new Session((SocketChannel) channel,
+										selector, this.requestHandler,
+										this.parameters);
+								
 								key.attach(session);
 							}
-							
+
 							session.socketReadEvent();
+						} else {
+							// this is unimplemented and would be another stream
+							// read event, indicating
+							// that some form of response stream data is ready
+							// to be read.
 						}
-						else {
-							// this is unimplemented and would be another stream read event, indicating 
-							// that some form of response stream data is ready to be read.
-						}
-					} 
-					else if (key.isWritable()) {
-						
-						// we don't care if this is anything other than a socketchannel
-						// because we only write to socket channels (server does no file manipulation)
-						
-						// if this triggers NullPointerException something horribly wrong has happened.
-						
+					} else if (key.isWritable()) {
+
+						// we don't care if this is anything other than a
+						// socketchannel
+						// because we only write to socket channels (server does
+						// no file manipulation)
+
+						// if this triggers NullPointerException something
+						// horribly wrong has happened.
+
 						Session session = (Session) key.attachment();
 						session.socketWriteEvent();
-						
+
 					}
 
 					ki.remove();

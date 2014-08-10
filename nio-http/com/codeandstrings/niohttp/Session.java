@@ -9,11 +9,15 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 
+import com.codeandstrings.niohttp.data.IdealBlockSize;
+import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
 import com.codeandstrings.niohttp.exceptions.http.RequestEntityTooLargeException;
 import com.codeandstrings.niohttp.handlers.RequestHandler;
 import com.codeandstrings.niohttp.handlers.StringRequestHandler;
+import com.codeandstrings.niohttp.request.Request;
+import com.codeandstrings.niohttp.request.RequestHeaderFactory;
 import com.codeandstrings.niohttp.response.BufferContainer;
 import com.codeandstrings.niohttp.response.ExceptionResponseFactory;
 import com.codeandstrings.niohttp.response.Response;
@@ -46,6 +50,7 @@ public class Session {
 	 */
 	private SocketChannel channel;
 	private Selector selector;
+	private Parameters parameters;
 
 	/*
 	 * Request acceptance data
@@ -70,13 +75,14 @@ public class Session {
 	 * @param selector
 	 */
 	public Session(SocketChannel channel, Selector selector,
-			RequestHandler handler) {
+			RequestHandler handler, Parameters parameters) {
 		this.channel = channel;
 		this.selector = selector;
 		this.maxRequestSize = IdealBlockSize.VALUE;
 		this.readBuffer = ByteBuffer.allocate(128);
 		this.outputQueue = new ArrayList<BufferContainer>();
 		this.requestHandler = handler;
+		this.parameters = parameters;
 		this.reset();
 	}
 
@@ -96,17 +102,26 @@ public class Session {
 		if (this.requestHandler instanceof StringRequestHandler) {
 
 			StringRequestHandler casted = (StringRequestHandler) this.requestHandler;
-			
-			Response response = ResponseFactory.createResponse(
-					casted.handleRequest(r), casted.getContentType(),
-					r.getRequestProtocol());
-			
-			if (r.getRequestProtocol() == HttpProtocol.HTTP1_0) {
-				this.outputQueue.add(new BufferContainer(response.getByteBuffer(), true));
-			} else {
-				this.outputQueue.add(new BufferContainer(response.getByteBuffer(), false));
+
+			try {
+
+				Response response = ResponseFactory.createResponse(
+						casted.handleRequest(r), casted.getContentType(),
+						r.getRequestProtocol(), r.getRequestMethod(),
+						this.parameters);
+
+				if (r.getRequestProtocol() == HttpProtocol.HTTP1_0) {
+					this.outputQueue.add(new BufferContainer(response
+							.getByteBuffer(), true));
+				} else {
+					this.outputQueue.add(new BufferContainer(response
+							.getByteBuffer(), false));
+				}
+
+			} catch (HttpException e) {
+				this.generateResponseException(e);
 			}
-			
+
 			this.socketWriteEvent();
 
 		}
@@ -125,10 +140,13 @@ public class Session {
 		}
 
 		if (headerFactory.shouldBuildRequestHeader()) {
-			
-			InetSocketAddress remote = (InetSocketAddress)this.channel.getRemoteAddress();
-						
-			Request r = Request.generateRequest(remote.getHostString(), headerFactory.build());
+
+			InetSocketAddress remote = (InetSocketAddress) this.channel
+					.getRemoteAddress();
+
+			Request r = Request.generateRequest(remote.getHostString(),
+					remote.getPort(), headerFactory.build());
+
 			this.handleRequest(r);
 			this.reset();
 		}
@@ -212,7 +230,7 @@ public class Session {
 
 	private void generateResponseException(HttpException e) throws IOException {
 
-		Response r = (new ExceptionResponseFactory(e)).create();
+		Response r = (new ExceptionResponseFactory(e)).create(this.parameters);
 		this.outputQueue.add(new BufferContainer(r.getByteBuffer(), true));
 		this.setSelectionRequest(true);
 		this.socketWriteEvent();
@@ -223,12 +241,12 @@ public class Session {
 
 		try {
 			this.readBuffer.clear();
-			
+
 			if (!this.channel.isConnected() || !this.channel.isOpen()) {
 				System.out.println("This connection is now closed.");
 				return;
 			}
-			
+
 			int bytesRead = this.channel.read(this.readBuffer);
 
 			if (bytesRead == -1) {

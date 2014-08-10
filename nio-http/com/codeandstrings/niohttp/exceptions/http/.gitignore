@@ -4,3 +4,4 @@
 /InternalServerErrorException.class
 /MethodNotAllowedException.class
 /RequestEntityTooLargeException.class
+/NotFoundException.class
