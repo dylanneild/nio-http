@@ -1,5 +1,6 @@
 package com.codeandstrings.niohttp;
 
+import com.codeandstrings.niohttp.exceptions.http.*;
 import com.codeandstrings.niohttp.handlers.StringRequestHandler;
 import com.codeandstrings.niohttp.request.Request;
 
@@ -15,8 +16,8 @@ public class Debug {
 			}
 
 			@Override
-			public String handleRequest(Request request) {				
-				return "Thanks for connecting from " + request.getRemoteAddr();				
+			public String handleRequest(Request request) throws HttpException {			
+				return "Thanks for connecting from " + request.getRemoteAddr() + ":" + request.getRemotePort();				
 			}
 			
 		};	

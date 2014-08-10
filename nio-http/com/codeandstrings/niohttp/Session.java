@@ -99,17 +99,25 @@ public class Session {
 		if (this.requestHandler instanceof StringRequestHandler) {
 
 			StringRequestHandler casted = (StringRequestHandler) this.requestHandler;
-			
-			Response response = ResponseFactory.createResponse(
-					casted.handleRequest(r), casted.getContentType(),
-					r.getRequestProtocol());
-			
-			if (r.getRequestProtocol() == HttpProtocol.HTTP1_0) {
-				this.outputQueue.add(new BufferContainer(response.getByteBuffer(), true));
-			} else {
-				this.outputQueue.add(new BufferContainer(response.getByteBuffer(), false));
+
+			try {
+
+				Response response = ResponseFactory.createResponse(
+						casted.handleRequest(r), casted.getContentType(),
+						r.getRequestProtocol());
+
+				if (r.getRequestProtocol() == HttpProtocol.HTTP1_0) {
+					this.outputQueue.add(new BufferContainer(response
+							.getByteBuffer(), true));
+				} else {
+					this.outputQueue.add(new BufferContainer(response
+							.getByteBuffer(), false));
+				}
+
+			} catch (HttpException e) {
+				this.generateResponseException(e);
 			}
-			
+
 			this.socketWriteEvent();
 
 		}
@@ -128,10 +136,13 @@ public class Session {
 		}
 
 		if (headerFactory.shouldBuildRequestHeader()) {
+
+			InetSocketAddress remote = (InetSocketAddress) this.channel
+					.getRemoteAddress();
+
+			Request r = Request.generateRequest(remote.getHostString(),
+					remote.getPort(), headerFactory.build());
 			
-			InetSocketAddress remote = (InetSocketAddress)this.channel.getRemoteAddress();
-						
-			Request r = Request.generateRequest(remote.getHostString(), headerFactory.build());
 			this.handleRequest(r);
 			this.reset();
 		}
@@ -226,12 +237,12 @@ public class Session {
 
 		try {
 			this.readBuffer.clear();
-			
+
 			if (!this.channel.isConnected() || !this.channel.isOpen()) {
 				System.out.println("This connection is now closed.");
 				return;
 			}
-			
+
 			int bytesRead = this.channel.read(this.readBuffer);
 
 			if (bytesRead == -1) {
