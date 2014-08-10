@@ -18,6 +18,10 @@ public class Server implements Runnable {
 	private ServerSocketChannel serverSocketChannel;
 	private RequestHandler requestHandler;
 
+	public Server() {
+		this.parameters = Parameters.getDefaultParameters();
+	}
+	
 	public Parameters getParameters() {
 		return parameters;
 	}
