@@ -17,6 +17,14 @@ public class HeaderPair {
 
 	}
 
+	public String getName() {
+		return name;
+	}
+
+	public String getValue() {
+		return value;
+	}
+
 	public HeaderPair(String name, String value) {
 		super();
 		this.name = name;

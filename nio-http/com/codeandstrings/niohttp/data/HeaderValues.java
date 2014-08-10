@@ -1,6 +1,9 @@
 package com.codeandstrings.niohttp.data;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
 
 public class HeaderValues {
 
@@ -40,6 +43,32 @@ public class HeaderValues {
 		this.headers = new ArrayList<HeaderPair>();
 	}
 
+	public List<String> getValue(String name) {
+		
+		ArrayList<String> r = new ArrayList<String>();
+		
+		for (HeaderPair pair : this.headers) {
+			if (pair.getName().equals(name)) {
+				r.add(pair.getValue());
+			}
+		}
+		
+		return r;
+		
+	}
+	
+	public Iterator<String> getNames() {
+		
+		HashSet<String> r = new HashSet<String>();
+		
+		for (HeaderPair pair : this.headers) {
+			r.add(pair.getName());
+		}
+		
+		return r.iterator();
+		
+	}
+	
 	public void addHeader(String name, String value) {
 
 		if (name == null)

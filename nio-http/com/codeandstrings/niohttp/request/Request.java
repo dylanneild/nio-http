@@ -1,6 +1,8 @@
 package com.codeandstrings.niohttp.request;
 
 import java.net.URI;
+import java.util.Iterator;
+import java.util.List;
 
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
@@ -41,6 +43,18 @@ public class Request {
 
 	public HttpProtocol getRequestProtocol() {
 		return header.getProtocol();
+	}
+
+	public String getHeader(String name) {
+		return header.getHeader(name);
+	}
+
+	public List<String> getHeaders(String name) {
+		return header.getHeaders(name);
+	}
+
+	public Iterator<String> getHeaderNames() {
+		return header.getHeaderNames();
 	}
 
 	@Override
