@@ -32,7 +32,13 @@ public class Server implements Runnable {
 	}
 
 	private void configureSocketAddress() {
-		this.socketAddress = new InetSocketAddress(this.parameters.getPort());
+		if (this.parameters.getServerIp() != null) {
+			this.socketAddress = new InetSocketAddress(
+					this.parameters.getServerIp(), this.parameters.getPort());
+		} else {
+			this.socketAddress = new InetSocketAddress(
+					this.parameters.getPort());
+		}
 	}
 
 	public void setRequestHandler(RequestHandler requestHandler) {
@@ -102,7 +108,7 @@ public class Server implements Runnable {
 								session = new Session((SocketChannel) channel,
 										selector, this.requestHandler,
 										this.parameters);
-								
+
 								key.attach(session);
 							}
 
