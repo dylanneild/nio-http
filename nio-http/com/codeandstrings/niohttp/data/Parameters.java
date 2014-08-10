@@ -5,15 +5,25 @@ public class Parameters {
 	private int port;
 	private String serverString;
 
+	private void configureDefaultParameters() {
+		this.port = 8888;
+		this.serverString = "Java-NIO";
+	}
+
 	public static Parameters getDefaultParameters() {
 
 		Parameters r = new Parameters();
-
-		r.port = 8888;
-		r.serverString = "Java-NIO";
-
+		r.configureDefaultParameters();
 		return r;
 
+	}
+
+	public Parameters() {
+		this.configureDefaultParameters();
+	}
+
+	public Parameters(int port) {
+		this.port = port;
 	}
 
 	public String getServerString() {
