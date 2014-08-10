@@ -2,6 +2,9 @@ package com.codeandstrings.niohttp;
 
 import java.net.URI;
 
+import com.codeandstrings.niohttp.enums.HttpProtocol;
+import com.codeandstrings.niohttp.enums.RequestMethod;
+
 public class RequestHeader {
 
 	private RequestMethod method;

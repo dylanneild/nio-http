@@ -1,17 +1,24 @@
 package com.codeandstrings.niohttp;
 
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 
+import com.codeandstrings.niohttp.exceptions.http.HttpException;
+import com.codeandstrings.niohttp.handlers.RequestHandler;
+import com.codeandstrings.niohttp.handlers.StringRequestHandler;
+import com.codeandstrings.niohttp.response.ResponseFactory;
+
 public class Server implements Runnable {
 
 	private Parameters parameters;
 	private InetSocketAddress socketAddress;
 	private ServerSocketChannel serverSocketChannel;
+	private RequestHandler requestHandler;
 
 	public Parameters getParameters() {
 		return parameters;
@@ -23,6 +30,10 @@ public class Server implements Runnable {
 
 	private void configureSocketAddress() throws Exception {
 		this.socketAddress = new InetSocketAddress(this.parameters.getPort());
+	}
+	
+	public void setRequestHandler(RequestHandler requestHandler) {
+		this.requestHandler = requestHandler;
 	}
 
 	private void configureServerSocketChannel() throws Exception {
@@ -67,17 +78,31 @@ public class Server implements Runnable {
 
 					} else if (key.isReadable()) {
 
+						SocketChannel channel = (SocketChannel)key.channel();
 						Session session = (Session) key.attachment();
 						
 						if (session == null) {
-							session = new Session((SocketChannel)key.channel());
+							session = new Session(channel);
 							key.attach(session);
 						} 
 
 						try {
+							
+							/* beyond not complete - just spits out text */
 							Request request = session.readEvent();
-						} catch (Exception e) {
+							
+							if (request != null) {
+								String response = ((StringRequestHandler)this.requestHandler).handleRequest(request);
+								ByteBuffer output = ByteBuffer.allocate(response.length());
+								output.put(response.getBytes());
+								session.getChannel().write(output);
+								
+							}
+							
+						} catch (HttpException e) {						
 							e.printStackTrace();
+							ResponseFactory.createResponse(e).write(channel);
+							channel.close();
 						}
 						
 

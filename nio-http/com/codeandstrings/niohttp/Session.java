@@ -52,6 +52,10 @@ public class Session {
 		this.requestHeaderLines = new ArrayList<Session$Line>();
 		this.lastHeaderByteLocation = 0;
 	}
+	
+	public SocketChannel getChannel() {
+		return this.channel;
+	}
 
 	private void analyze() throws HttpException {
 
@@ -64,11 +68,6 @@ public class Session {
 			headerFactory.addLine(sessionLine.line);
 		}
 		
-		if (headerFactory.isHeadUseable()) {
-			RequestHeader header = headerFactory.build();
-			System.out.println(header.toString());
-		}
-
 	}
 
 	private void extractLines() {
