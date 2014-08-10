@@ -2,6 +2,8 @@ package com.codeandstrings.niohttp;
 
 import java.net.URI;
 
+import com.codeandstrings.niohttp.enums.HttpProtocol;
+import com.codeandstrings.niohttp.enums.RequestMethod;
 import com.codeandstrings.niohttp.exceptions.http.BadRequestException;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
 import com.codeandstrings.niohttp.exceptions.http.HttpVersionNotSupported;
@@ -13,9 +15,11 @@ public class RequestHeaderFactory {
 	private RequestMethod method;
 	private URI uri;
 	private HttpProtocol protocol;
+	private boolean previousLineWasStartCommand;
 	
 	public RequestHeaderFactory() {
 		this.receivedLineCount = 0;
+		this.previousLineWasStartCommand = false;
 	}
 	
 	public RequestHeader build() {
@@ -32,6 +36,10 @@ public class RequestHeaderFactory {
 	
 	public void addLine(String line) throws HttpException {
 		
+		// reset previous line indication
+		this.previousLineWasStartCommand = false;
+		
+		// accept line
 		if (this.receivedLineCount == 0) {
 			
 			this.extractMethod(line);
@@ -39,7 +47,11 @@ public class RequestHeaderFactory {
 			this.extractProtocol(line);
 			
 		} else {
-			// extract key/value pair
+			if (line.length() == 0) {
+				this.previousLineWasStartCommand = true;
+			} else {
+				// this is another header line
+			}
 		}
 		
 		this.receivedLineCount++;
@@ -107,15 +119,33 @@ public class RequestHeaderFactory {
 				
 	}
 	
-	public boolean isHeadUseable() {
+	public boolean shouldBuildRequestHeader() {
 		
 		if (this.method == null)
+			// not ready to make a request
 			return false;
 		else if (this.uri == null)
+			// not ready to make a request
 			return false;
-		else
+		else if (this.protocol == null) {			
+			// this is the most trivial request; it's basically
+			// just a GET /uri so should be honored right away 
+			// with minimal fuss and no keep alive.
+			//
+			this.protocol = HttpProtocol.HTTP1_0;
 			return true;
-		
+		} else {
+			// was the last line sent a start command (carriage return on new line)?
+			// if so, indicate the request should be built and go
+			// otherwise keep accepting new data...
+			//
+			if (this.previousLineWasStartCommand) { 
+				return true;
+			} else {
+				return false;
+			}
+		}
+		 		
 	}
 	
 }

@@ -10,3 +10,11 @@
 /Server.class
 /Session$Line.class
 /Session.class
+/RequestHandler.class
+/StringRequestHandler.class
+/Debug$1.class
+/ResponseFactory.class
+/Response.class
+/Headers.class
+/HeaderValues.class
+/HeaderPair.class
