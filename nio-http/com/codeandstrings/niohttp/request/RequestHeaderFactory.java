@@ -102,6 +102,8 @@ public class RequestHeaderFactory {
 			this.method = RequestMethod.GET;
 		} else if (tokens[0].equalsIgnoreCase("post")) {
 			this.method = RequestMethod.POST;
+		} else if (tokens[0].equalsIgnoreCase("head")) {
+			this.method = RequestMethod.HEAD;
 		} else {
 			throw new MethodNotAllowedException(tokens[0]);
 		}

@@ -10,6 +10,7 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 
 import com.codeandstrings.niohttp.data.IdealBlockSize;
+import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
 import com.codeandstrings.niohttp.exceptions.http.RequestEntityTooLargeException;
@@ -49,6 +50,7 @@ public class Session {
 	 */
 	private SocketChannel channel;
 	private Selector selector;
+	private Parameters parameters;
 
 	/*
 	 * Request acceptance data
@@ -73,13 +75,14 @@ public class Session {
 	 * @param selector
 	 */
 	public Session(SocketChannel channel, Selector selector,
-			RequestHandler handler) {
+			RequestHandler handler, Parameters parameters) {
 		this.channel = channel;
 		this.selector = selector;
 		this.maxRequestSize = IdealBlockSize.VALUE;
 		this.readBuffer = ByteBuffer.allocate(128);
 		this.outputQueue = new ArrayList<BufferContainer>();
 		this.requestHandler = handler;
+		this.parameters = parameters;
 		this.reset();
 	}
 
@@ -104,7 +107,8 @@ public class Session {
 
 				Response response = ResponseFactory.createResponse(
 						casted.handleRequest(r), casted.getContentType(),
-						r.getRequestProtocol());
+						r.getRequestProtocol(), r.getRequestMethod(),
+						this.parameters);
 
 				if (r.getRequestProtocol() == HttpProtocol.HTTP1_0) {
 					this.outputQueue.add(new BufferContainer(response
@@ -142,7 +146,7 @@ public class Session {
 
 			Request r = Request.generateRequest(remote.getHostString(),
 					remote.getPort(), headerFactory.build());
-			
+
 			this.handleRequest(r);
 			this.reset();
 		}
@@ -226,7 +230,7 @@ public class Session {
 
 	private void generateResponseException(HttpException e) throws IOException {
 
-		Response r = (new ExceptionResponseFactory(e)).create();
+		Response r = (new ExceptionResponseFactory(e)).create(this.parameters);
 		this.outputQueue.add(new BufferContainer(r.getByteBuffer(), true));
 		this.setSelectionRequest(true);
 		this.socketWriteEvent();
