@@ -1,4 +1,4 @@
-package com.codeandstrings.niohttp;
+package com.codeandstrings.niohttp.request;
 
 import java.net.URI;
 

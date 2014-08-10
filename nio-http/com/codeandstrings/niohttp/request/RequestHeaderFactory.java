@@ -1,7 +1,8 @@
-package com.codeandstrings.niohttp;
+package com.codeandstrings.niohttp.request;
 
 import java.net.URI;
 
+import com.codeandstrings.niohttp.data.HeaderValues;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
 import com.codeandstrings.niohttp.exceptions.http.BadRequestException;

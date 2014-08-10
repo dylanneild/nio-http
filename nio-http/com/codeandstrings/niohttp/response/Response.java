@@ -3,7 +3,8 @@ package com.codeandstrings.niohttp.response;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
-import com.codeandstrings.niohttp.HeaderValues;
+import com.codeandstrings.niohttp.data.HeaderValues;
+import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 
 public class Response {
@@ -92,7 +93,7 @@ public class Response {
 		// we'll need to make this more complex - indicate to the channel
 		// that we're here and working, etc.
 
-		ByteBuffer buffer = ByteBuffer.allocate(8192);
+		ByteBuffer buffer = ByteBuffer.allocate(IdealBlockSize.VALUE);
 
 		if (this.protocol == HttpProtocol.HTTP1_1) {
 			

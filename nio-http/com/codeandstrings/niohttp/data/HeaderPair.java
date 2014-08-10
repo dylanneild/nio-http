@@ -1,4 +1,4 @@
-package com.codeandstrings.niohttp;
+package com.codeandstrings.niohttp.data;
 
 public class HeaderPair {
 

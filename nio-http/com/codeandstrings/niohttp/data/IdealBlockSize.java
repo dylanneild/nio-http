@@ -1,9 +1,9 @@
-package com.codeandstrings.niohttp;
+package com.codeandstrings.niohttp.data;
 
 import java.io.BufferedOutputStream;
 import java.io.OutputStream;
 
-class IdealBlockSize {
+public class IdealBlockSize {
 	
 	private static class MyBufferedOS extends BufferedOutputStream {
 		public MyBufferedOS() {

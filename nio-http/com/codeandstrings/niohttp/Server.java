@@ -9,6 +9,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 
+import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.handlers.RequestHandler;
 
 public class Server implements Runnable {

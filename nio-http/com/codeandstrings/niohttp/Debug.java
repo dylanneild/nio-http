@@ -1,6 +1,7 @@
 package com.codeandstrings.niohttp;
 
 import com.codeandstrings.niohttp.handlers.StringRequestHandler;
+import com.codeandstrings.niohttp.request.Request;
 
 public class Debug {
 
