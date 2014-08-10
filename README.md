@@ -14,9 +14,9 @@ Sure! Please place any pull requests against the devel branch.
 
 ### Current Status
 
-Generally non-functional; clients can connect and submit an initial request. Internal processing has begun but is presently not completed enough to deliver full responses to clients.
+Functional for basic text requests via a StringRequestHandler (see example below) - using GET requests over HTTP/1.0 and HTTP/1.1.
 
-Basic error responses are currently generated - bad requests, unsupported methods, etc all trigger propper HTTP/1.1 responses and are returned to the client.
+File stream responses are not yet implemented and non-GET responses and are not tested (POST) or not implemented (HEAD, etc).
 
 ### Example Server
 
