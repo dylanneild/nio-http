@@ -14,5 +14,7 @@ Sure! Please place any pull requests against the devel branch.
 
 ### Current Status
 
-Non-functional; clients can connect and submit an initial request. Internal processing has begin but is presently not completed enough to deliver responses to clients.
+Generally non-functional; clients can connect and submit an initial request. Internal processing has begun but is presently not completed enough to deliver full responses to clients.
+
+Basic error responses are currently generated - bad requests, unsupported methods, etc all trigger propper HTTP/1.1 responses and are returned to the client.
 
