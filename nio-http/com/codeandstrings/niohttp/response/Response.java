@@ -1,9 +1,7 @@
 package com.codeandstrings.niohttp.response;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
 
 import com.codeandstrings.niohttp.HeaderValues;
 
@@ -78,7 +76,7 @@ public class Response {
 		this.description = description;
 	}
 	
-	public void write(SocketChannel channel) throws IOException {
+	public ByteBuffer getByteBuffer() {
 		
 		// this needs overhauling - right now we're just reading a simple 
 		// header but as data gets larger and includes streams
@@ -103,7 +101,7 @@ public class Response {
 		} catch (UnsupportedEncodingException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return; // fix this!
+			return null;
 		}
 		
 		ByteBuffer b = ByteBuffer.allocate(bytes.length);		
@@ -111,9 +109,8 @@ public class Response {
 		
 		b.flip();
 		
-		channel.write(b);
-		
-		
+		return b;
+				
 	}
 
 }
