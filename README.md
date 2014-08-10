@@ -20,7 +20,6 @@ File stream responses are not yet implemented and non-GET/HEAD responses and are
 
 ### Roadmap
 
-* Add IP bind support to server; currently server binds to *:port (all addresses)
 * Finish HTTP POST support.
 * Upgrade session system to support request bodies.
 * Upgrade request object to include POST or GET parameter block.
