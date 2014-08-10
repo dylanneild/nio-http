@@ -1,24 +1,31 @@
 package com.codeandstrings.niohttp.response;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
 
 import com.codeandstrings.niohttp.HeaderValues;
+import com.codeandstrings.niohttp.enums.HttpProtocol;
 
 public class Response {
 
+	private HttpProtocol protocol;
 	private int code;
 	private String description;
 	private HeaderValues headers;
+	private ByteBuffer body;
 
-	public Response() {
+	public Response(HttpProtocol protocol) {
+		this.protocol = protocol;
 		this.headers = new HeaderValues();
+		this.headers.addHeader("Server", "Java-NIO");
 	}
 
 	public void addHeader(String name, String value) {
 		headers.addHeader(name, value);
+	}
+
+	public void setBody(ByteBuffer body) {
+		this.body = body;
 	}
 
 	@Override
@@ -77,43 +84,51 @@ public class Response {
 	public void setDescription(String description) {
 		this.description = description;
 	}
-	
-	public void write(SocketChannel channel) throws IOException {
-		
-		// this needs overhauling - right now we're just reading a simple 
+
+	public ByteBuffer getByteBuffer() {
+
+		// this needs overhauling - right now we're just reading a simple
 		// header but as data gets larger and includes streams
-		// we'll need to make this more complex - indicate to the channel 
+		// we'll need to make this more complex - indicate to the channel
 		// that we're here and working, etc.
-		
-		StringBuilder r = new StringBuilder();
-		
-		r.append("HTTP/1.1 ");
-		r.append(this.code);
-		r.append(" ");
-		r.append(this.description);
-		r.append("\r\n");
-		r.append(this.headers.generateResponse());
-		r.append("\r\n");
-		
-		String s = r.toString();		
-		byte bytes[] = null;
-		
-		try {
-			bytes = s.getBytes("US-ASCII");
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return; // fix this!
+
+		ByteBuffer buffer = ByteBuffer.allocate(8192);
+
+		if (this.protocol == HttpProtocol.HTTP1_1) {
+			
+			StringBuilder r = new StringBuilder();
+	
+			r.append("HTTP/1.1 ");
+			r.append(this.code);
+			r.append(" ");
+			r.append(this.description);
+			r.append("\r\n");
+			r.append(this.headers.generateResponse());
+			r.append("\r\n");
+	
+			String s = r.toString();
+			byte bytes[] = null;
+	
+			try {
+				bytes = s.getBytes("US-ASCII");
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return null;
+			}
+
+			buffer.put(bytes);
+			
+		}
+
+		if (this.body != null) {		
+			buffer.put(this.body);
 		}
 		
-		ByteBuffer b = ByteBuffer.allocate(bytes.length);		
-		b.put(bytes);
-		
-		b.flip();
-		
-		channel.write(b);
-		
-		
+		buffer.flip();
+
+		return buffer;		
+
 	}
 
 }

@@ -6,9 +6,6 @@ public class Debug {
 
 	public static void main (String args[]) {
 	
-		Parameters parameters = new Parameters();
-		parameters.setPort(8888);
-					
 		StringRequestHandler handler = new StringRequestHandler() {
 			
 			@Override
@@ -17,14 +14,13 @@ public class Debug {
 			}
 
 			@Override
-			public String handleRequest(Request request) {
-				return "Here is your data.";
+			public String handleRequest(Request request) {				
+				return "Thanks for connecting from " + request.getRemoteAddr();				
 			}
 			
 		};	
 		
 		Server server = new Server();
-		server.setParameters(parameters);
 		server.setRequestHandler(handler);
 		
 		server.run();

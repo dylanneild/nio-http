@@ -16,10 +16,12 @@ public class RequestHeaderFactory {
 	private URI uri;
 	private HttpProtocol protocol;
 	private boolean previousLineWasStartCommand;
+	private HeaderValues headerValues;
 	
 	public RequestHeaderFactory() {
 		this.receivedLineCount = 0;
 		this.previousLineWasStartCommand = false;
+		this.headerValues = new HeaderValues();
 	}
 	
 	public RequestHeader build() {
@@ -29,6 +31,7 @@ public class RequestHeaderFactory {
 		r.setMethod(this.method);
 		r.setUri(this.uri);
 		r.setProtocol(this.protocol);
+		r.setHeaders(this.headerValues);
 		
 		return r;
 		
@@ -50,7 +53,22 @@ public class RequestHeaderFactory {
 			if (line.length() == 0) {
 				this.previousLineWasStartCommand = true;
 			} else {
-				// this is another header line
+				
+				int colon = line.indexOf(":");
+				
+				if (colon == -1 || colon > (line.length() - 1)) {
+					throw new BadRequestException();
+				} 
+				
+				String key = line.substring(0, colon).trim();
+				String value = line.substring(colon+1).trim();
+				
+				if (key.length() == 0 || value.length() == 0) {
+					throw new BadRequestException();
+				}
+								
+				this.headerValues.addHeader(key, value);					
+				
 			}
 		}
 		

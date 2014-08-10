@@ -4,6 +4,15 @@ public class Parameters {
 
 	private int port;
 
+	public static Parameters getDefaultParameters() {
+		
+		Parameters r = new Parameters();
+		r.setPort(8888);
+		
+		return r;
+		
+	}
+	
 	public int getPort() {
 		return port;
 	}
