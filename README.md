@@ -36,6 +36,12 @@ This server is running demo code that shows the server up and running.
 
 ### How To Use
 
+To build the library, either checout into Eclipse and package your own JAR file (or use the code as-is in your project), or build from the command line using Apache Ant:
+
+	# ant package
+	# file nio-http.jar 
+	nio-http.jar: Java archive data (JAR)
+
 The server library is designed to be very easy to integrate with your project. At the simplest level, simply create an instance of a RequestHandler object (in this case, a StringRequestHandler to return simple String answers) and pass it to the server as a request handler.
 
 	StringRequestHandler handler = new StringRequestHandler() {
