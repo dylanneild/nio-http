@@ -4,7 +4,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.exceptions.http.*;
 import com.codeandstrings.niohttp.handlers.StringRequestHandler;
 import com.codeandstrings.niohttp.request.Request;
@@ -121,10 +120,6 @@ public class Debug {
 
 		Server server = new Server();
 		server.setRequestHandler(handler);
-
-		Parameters parameters = Parameters.getDefaultParameters();
-		parameters.setServerIp("2607:f2c0:f00e:1e00:1610:9fff:fed2:99bb");
-		server.setParameters(parameters);
 
 		server.run();
 
