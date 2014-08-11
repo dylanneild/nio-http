@@ -27,6 +27,7 @@ File stream responses are not yet implemented.
 * Update Server object to support multiple handlers, mounted by URI, including wildcards.
 * Update Server object to support default URI's.
 * Update exceptions to support bodies
+* Fornalized Keep-Alive support
 
 ### Example Server
 
