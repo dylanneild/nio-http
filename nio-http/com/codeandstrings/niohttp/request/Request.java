@@ -1,9 +1,14 @@
 package com.codeandstrings.niohttp.request;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
-import java.util.Iterator;
+import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import com.codeandstrings.niohttp.data.NameValuePair;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
 
@@ -22,6 +27,89 @@ public class Request {
 		r.remotePort = remotePort;
 		r.header = header;
 
+		return r;
+	}
+	
+	private List<NameValuePair> getGetParameterNameValuePairs() {
+		
+		URI uri = this.getRequestURI();
+		String query = uri.getQuery();
+		ArrayList<NameValuePair> r = new ArrayList<NameValuePair>();
+		
+		if (query == null) {
+			return r;
+		}
+		
+		String[] tokens = query.split("&");
+		
+		for (int i = 0; i < tokens.length; i++) {
+			
+			String single = tokens[i];
+			String[] extracted = single.split("=");
+			
+			String name = extracted[0];
+						
+			if (extracted.length == 2) {
+				try {
+					String value = URLDecoder.decode(extracted[1], "UTF-8");
+					r.add(new NameValuePair(name, value));
+				} catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+				}
+			} else {
+				r.add(new NameValuePair(name, ""));
+			}
+			
+		}
+				
+		return r;
+		
+	}
+	
+	private List<String> getGetParameters(String name) {
+		
+		List<NameValuePair> list = getGetParameterNameValuePairs();
+		ArrayList<String> r = new ArrayList<String>();
+		
+		for (NameValuePair nvp : list) {			
+			if (nvp.getName().equals(name)) {
+				r.add(nvp.getValue());
+			}			
+		}
+		
+		return r;
+		
+	}
+	
+	private HashSet<String> getGetParameterNames() {
+		
+		List<NameValuePair> list = getGetParameterNameValuePairs();
+		HashSet<String> h = new HashSet<String>();
+		
+		for (NameValuePair nvp : list) {
+			h.add(nvp.getName());
+		}
+				
+		return h;
+	}
+	
+	public List<String> getParameters(String name) {		
+		ArrayList<String> r = new ArrayList<String>();
+		r.addAll(this.getGetParameters(name));
+		return r;		
+	}
+	
+	public String getParameter(String name) {
+		List<String> r = getParameters(name);
+		if (r.size() == 1)
+			return r.get(0);
+		else
+			return null;
+	}
+	
+	public Set<String> getParameterNames() {		
+		HashSet<String> r = new HashSet<String>();
+		r.addAll(getGetParameterNames());
 		return r;
 	}
 
@@ -53,7 +141,7 @@ public class Request {
 		return header.getHeaders(name);
 	}
 
-	public Iterator<String> getHeaderNames() {
+	public Set<String> getHeaderNames() {
 		return header.getHeaderNames();
 	}
 

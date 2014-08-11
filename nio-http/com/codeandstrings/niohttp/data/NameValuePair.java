@@ -1,12 +1,11 @@
 package com.codeandstrings.niohttp.data;
 
-public class HeaderPair {
+public class NameValuePair {
 
 	private String name;
 	private String value;
 
-	public String asResponseString() {
-
+	public String asHeaderString() {
 		StringBuilder r = new StringBuilder();
 
 		r.append(name);
@@ -14,7 +13,6 @@ public class HeaderPair {
 		r.append(value);
 
 		return r.toString();
-
 	}
 
 	public String getName() {
@@ -25,7 +23,7 @@ public class HeaderPair {
 		return value;
 	}
 
-	public HeaderPair(String name, String value) {
+	public NameValuePair(String name, String value) {
 		super();
 		this.name = name;
 		this.value = value;
@@ -53,7 +51,7 @@ public class HeaderPair {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		HeaderPair other = (HeaderPair) obj;
+		NameValuePair other = (NameValuePair) obj;
 		if (name == null) {
 			if (other.name != null)
 				return false;

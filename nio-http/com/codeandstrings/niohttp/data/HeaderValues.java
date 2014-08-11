@@ -2,12 +2,12 @@ package com.codeandstrings.niohttp.data;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 public class HeaderValues {
 
-	private ArrayList<HeaderPair> headers;
+	private ArrayList<NameValuePair> headers;
 
 	@Override
 	public int hashCode() {
@@ -40,14 +40,14 @@ public class HeaderValues {
 	}
 
 	public HeaderValues() {
-		this.headers = new ArrayList<HeaderPair>();
+		this.headers = new ArrayList<NameValuePair>();
 	}
 
 	public List<String> getValue(String name) {
 		
 		ArrayList<String> r = new ArrayList<String>();
 		
-		for (HeaderPair pair : this.headers) {
+		for (NameValuePair pair : this.headers) {
 			if (pair.getName().equals(name)) {
 				r.add(pair.getValue());
 			}
@@ -57,15 +57,15 @@ public class HeaderValues {
 		
 	}
 	
-	public Iterator<String> getNames() {
+	public Set<String> getNames() {
 		
-		HashSet<String> r = new HashSet<String>();
+		HashSet<String> h = new HashSet<String>();
 		
-		for (HeaderPair pair : this.headers) {
-			r.add(pair.getName());
+		for (NameValuePair pair : this.headers) {
+			h.add(pair.getName());
 		}
 		
-		return r.iterator();
+		return h;
 		
 	}
 	
@@ -86,7 +86,7 @@ public class HeaderValues {
 		if (trimmedValue.length() == 0)
 			return;
 
-		this.headers.add(new HeaderPair(trimmedName, trimmedValue));
+		this.headers.add(new NameValuePair(trimmedName, trimmedValue));
 
 	}
 
@@ -94,8 +94,8 @@ public class HeaderValues {
 
 		StringBuilder b = new StringBuilder();
 
-		for (HeaderPair pair : headers) {
-			b.append(pair.asResponseString());
+		for (NameValuePair pair : headers) {
+			b.append(pair.asHeaderString());
 			b.append("\r\n");
 		}
 

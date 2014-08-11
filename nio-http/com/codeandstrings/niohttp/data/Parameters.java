@@ -8,7 +8,7 @@ public class Parameters {
 
 	private void configureDefaultParameters() {
 		this.port = 8888;
-		this.serverString = "Java-NIO";
+		this.serverString = "NIO-HTTP";
 		this.serverIp = null;
 	}
 
