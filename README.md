@@ -14,10 +14,9 @@ Sure! Please place any pull requests against the devel branch.
 
 ### Current Status
 
-Functional for basic text requests via a StringRequestHandler (see example below) - using GET and HEAD requests over HTTP/1.0 and HTTP/1.1.
-GET/HEAD/POST requests working, as do parameter value and header value passing via GET.
+Functional for basic text requests via a StringRequestHandler (see example below) - using GET and HEAD requests over HTTP/1.0 and HTTP/1.1. GET/HEAD/POST requests working, as do parameter value and header value passing via GET/POST (GET and POST via x-www-form-urlencoded only; presently form/multipart requests are received but not decoded into values).
 
-File stream responses are not yet implemented.
+File stream responses are not yet implemented (Simple String handlers as exampled below only), though this is an immediate issue to resolve.
 
 ### Issues
 
