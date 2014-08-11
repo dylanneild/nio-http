@@ -6,6 +6,15 @@ public class BufferContainer {
 
 	private ByteBuffer buffer;
 	private boolean closeOnTransmission;
+	private long requestId;
+
+	public long getRequestId() {
+		return requestId;
+	}
+
+	public void setRequestId(long requestId) {
+		this.requestId = requestId;
+	}
 
 	public ByteBuffer getBuffer() {
 		return buffer;
@@ -23,17 +32,16 @@ public class BufferContainer {
 		this.closeOnTransmission = closeOnTransmission;
 	}
 
-	@Override
-	public String toString() {
-		return "BufferContainer [buffer=" + buffer
-				+ ", shouldCloseOnTransmission=" + closeOnTransmission
-				+ "]";
-	}
-
 	public BufferContainer(ByteBuffer buffer, boolean shouldCloseOnTransmission) {
 		super();
 		this.buffer = buffer;
 		this.closeOnTransmission = shouldCloseOnTransmission;
+	}
+
+	@Override
+	public String toString() {
+		return "BufferContainer [buffer=" + buffer + ", closeOnTransmission="
+				+ closeOnTransmission + ", requestId=" + requestId + "]";
 	}
 
 	@Override
@@ -42,6 +50,7 @@ public class BufferContainer {
 		int result = 1;
 		result = prime * result + ((buffer == null) ? 0 : buffer.hashCode());
 		result = prime * result + (closeOnTransmission ? 1231 : 1237);
+		result = prime * result + (int) (requestId ^ (requestId >>> 32));
 		return result;
 	}
 
@@ -60,6 +69,8 @@ public class BufferContainer {
 		} else if (!buffer.equals(other.buffer))
 			return false;
 		if (closeOnTransmission != other.closeOnTransmission)
+			return false;
+		if (requestId != other.requestId)
 			return false;
 		return true;
 	}

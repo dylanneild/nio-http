@@ -4,16 +4,26 @@ public class Parameters {
 
 	private int port;
 	private String serverString;
+	private String serverIp;
+
+	private void configureDefaultParameters() {
+		this.port = 8888;
+		this.serverString = "NIO-HTTP";
+		this.serverIp = null;
+	}
 
 	public static Parameters getDefaultParameters() {
-
 		Parameters r = new Parameters();
-
-		r.port = 8888;
-		r.serverString = "Java-NIO";
-
+		r.configureDefaultParameters();
 		return r;
+	}
 
+	public Parameters() {
+		this.configureDefaultParameters();
+	}
+
+	public Parameters(int port) {
+		this.port = port;
 	}
 
 	public String getServerString() {
@@ -32,10 +42,18 @@ public class Parameters {
 		this.port = port;
 	}
 
+	public String getServerIp() {
+		return serverIp;
+	}
+
+	public void setServerIp(String serverIp) {
+		this.serverIp = serverIp;
+	}
+
 	@Override
 	public String toString() {
 		return "Parameters [port=" + port + ", serverString=" + serverString
-				+ "]";
+				+ ", serverIp=" + serverIp + "]";
 	}
 
 	@Override
@@ -43,6 +61,8 @@ public class Parameters {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + port;
+		result = prime * result
+				+ ((serverIp == null) ? 0 : serverIp.hashCode());
 		result = prime * result
 				+ ((serverString == null) ? 0 : serverString.hashCode());
 		return result;
@@ -58,6 +78,11 @@ public class Parameters {
 			return false;
 		Parameters other = (Parameters) obj;
 		if (port != other.port)
+			return false;
+		if (serverIp == null) {
+			if (other.serverIp != null)
+				return false;
+		} else if (!serverIp.equals(other.serverIp))
 			return false;
 		if (serverString == null) {
 			if (other.serverString != null)

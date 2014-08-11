@@ -1,6 +1,8 @@
 package com.codeandstrings.niohttp.request;
 
 import java.net.URI;
+import java.util.List;
+import java.util.Set;
 
 import com.codeandstrings.niohttp.data.HeaderValues;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
@@ -21,12 +23,25 @@ public class RequestHeader {
 		this.headers = headers;
 	}
 
-	public void addHeader(String name, String value) {
-		headers.addHeader(name, value);
+	public String getHeader(String name) {
+		List<String> values = this.headers.getValue(name);
+
+		if (values.size() == 1)
+			return values.get(0);
+		else
+			return null;
 	}
 
-	public HeaderValues getHeaders() {
-		return headers;
+	public List<String> getHeaders(String name) {
+		return this.headers.getValue(name);
+	}
+
+	public Set<String> getHeaderNames() {
+		return this.headers.getNames();
+	}
+
+	public void addHeader(String name, String value) {
+		headers.addHeader(name, value);
 	}
 
 	public void setMethod(RequestMethod method) {

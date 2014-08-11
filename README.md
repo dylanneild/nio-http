@@ -1,7 +1,7 @@
 nio-http
 ========
 
-An non-blocking I/O HTTP server library for Java 7.
+A non-blocking I/O HTTP server library for Java 7.
 
 ### Requirements
 
@@ -15,8 +15,18 @@ Sure! Please place any pull requests against the devel branch.
 ### Current Status
 
 Functional for basic text requests via a StringRequestHandler (see example below) - using GET and HEAD requests over HTTP/1.0 and HTTP/1.1.
+GET/HEAD/POST requests working, as do parameter value and header value passing via GET.
 
-File stream responses are not yet implemented and non-GET/HEAD responses and are not tested (POST) or not implemented (PUT, DELETE, etc).
+File stream responses are not yet implemented.
+
+### Roadmap
+
+* Upgrade session system to support request bodies.
+* Upgrade request object to include POST parameter block.
+* Add and test a file response object (return a file object as a response)
+* Update Server object to support multiple handlers, mounted by URI, including wildcards.
+* Update Server object to support default URI's.
+* Update exceptions to support bodies
 
 ### Example Server
 
