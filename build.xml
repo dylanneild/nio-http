@@ -1,0 +1,44 @@
+<project name="CafeWare" default="help">
+
+	<description>NIO-HTTP Build Project</description>
+
+	<target name="help">
+		<echo message="* Build commands: "/>
+		<echo message="* "/>
+		<echo message="* clean - Clean the build system"/>
+		<echo message="* all - Build nio-http"/>
+		<echo message="* package - Package into nio-http.jar"/>
+		<echo message="* "/>
+		<echo message="* Example: "/>
+		<echo message="* ant clean all package"/>
+		<echo message="* "/>
+		<echo message="* NOTE that 'package' depends on 'all' and will invoke it "/>
+		<echo message="* automatically so from a clean checkout the following is "/>
+		<echo message="* enough to build a working library: "/>
+		<echo message="* "/>
+		<echo message="* ant package "/>
+	</target>
+
+	<target name="clean">
+		<delete dir="${basedir}/dist" quiet="true" />
+		<delete file="${basedir}/nio-http.jar" quiet="true" />
+	</target>
+
+	<target name="all">
+		<mkdir dir="${basedir}/dist"/>
+		<javac srcdir="${basedir}"
+			   destdir="${basedir}/dist"
+			   optimize="true"
+			   listfiles="true">
+			
+			<include name="**/*.java" />
+		</javac>
+	</target>
+
+	<target name="package" depends="all">
+		<jar destfile="${basedir}/nio-http.jar" 
+			 basedir="${basedir}/dist"
+			 update="false"/>
+	</target>
+
+</project>
