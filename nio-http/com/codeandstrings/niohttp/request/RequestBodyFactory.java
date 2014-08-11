@@ -39,15 +39,7 @@ public class RequestBodyFactory {
 
 	public boolean isFull() {
 		
-		System.err.println("RequestBodyFactory.isFull(): Expecting " + bodyData.length + " received " + bytesReceived);
-		
 		if (bytesReceived == bodyData.length) {
-			try {
-				System.err.println(new String(bodyData, "UTF-8"));
-			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 			return true;
 		} else {
 			return false;

@@ -13,7 +13,6 @@ import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
-import com.codeandstrings.niohttp.exceptions.http.InternalServerErrorException;
 import com.codeandstrings.niohttp.exceptions.http.RequestEntityTooLargeException;
 import com.codeandstrings.niohttp.handlers.RequestHandler;
 import com.codeandstrings.niohttp.handlers.StringRequestHandler;
@@ -155,8 +154,7 @@ public class Session {
 	}
 	
 	private void copyExistingBytesToBody(int startPosition) {		
-		System.err.println("Generating body by copying existing bytes from " + startPosition);		
-		this.bodyFactory.addBytes(this.requestHeaderData, startPosition, this.lastHeaderByteLocation);		
+		this.bodyFactory.addBytes(this.requestHeaderData, startPosition, this.lastHeaderByteLocation);
 	}
 
 	private void analyzeForHeader() throws HttpException, IOException {
@@ -241,10 +239,7 @@ public class Session {
 	}
 
 	private void closeChannel() throws IOException {
-
-		System.err.println("Connection closed " + this.channel);
 		this.channel.close();
-
 	}
 
 	private void setSelectionRequest(boolean write)
@@ -273,7 +268,6 @@ public class Session {
 
 			// kill the connection?
 			if (container.isCloseOnTransmission()) {
-				System.err.println("close from socketWriteEvent");
 				this.closeChannel();
 				closedConnection = true;
 			}
@@ -300,14 +294,12 @@ public class Session {
 			this.readBuffer.clear();
 
 			if (!this.channel.isConnected() || !this.channel.isOpen()) {
-				System.out.println("This connection is now closed.");
 				return;
 			}
 
 			int bytesRead = this.channel.read(this.readBuffer);
 
 			if (bytesRead == -1) {
-				System.err.println("close from socketReadEvent");
 				this.closeChannel();
 			} else {
 
@@ -328,7 +320,7 @@ public class Session {
 					for (int i = 0; i < bytesRead; i++) {
 	
 						if (this.requestHeaderMarker >= (this.maxRequestSize - 1)) {
-							throw new InternalServerErrorException();
+							throw new RequestEntityTooLargeException();
 						}
 	
 						this.requestHeaderData[this.requestHeaderMarker] = bytes[i];
@@ -344,7 +336,6 @@ public class Session {
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
-			System.err.println("close from exception");
 			this.closeChannel();
 		} catch (HttpException e) {
 			generateResponseException(e);
