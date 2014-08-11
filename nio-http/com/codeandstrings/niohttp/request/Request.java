@@ -81,8 +81,13 @@ public class Request {
 		
 		String contentType = this.header.getContentType();
 		ArrayList<NameValuePair> r = new ArrayList<NameValuePair>();
+		
+		if (contentType == null) {
+			return r;
+		}
+
 		MimeType mimeType = null;
-				
+
 		try {
 			mimeType = new MimeType(contentType);
 		} catch (Exception e) {
