@@ -57,6 +57,38 @@ public class HeaderValues {
 		
 	}
 	
+	private String getCaseInsensitiveHeaderName(String name) {
+		
+		for (NameValuePair pair : this.headers) {
+			if (pair.getName().equalsIgnoreCase(name)) {
+				return pair.getValue();
+			}
+		}
+		
+		return null;
+		
+	}
+	
+	public String getRequestContentType() {		
+		return getCaseInsensitiveHeaderName("Content-Type");		
+	}
+	
+	public int getRequestContentLength() {
+		
+		String target = getCaseInsensitiveHeaderName("Content-Length");
+		
+		if (target == null)
+			return -1;
+		
+		try {
+			Integer r = Integer.valueOf(target);
+			return r.intValue();
+		} catch (Exception e) {
+			return -1;
+		}
+		
+	}
+	
 	public Set<String> getNames() {
 		
 		HashSet<String> h = new HashSet<String>();
