@@ -29,7 +29,7 @@
 		<javac srcdir="${basedir}"
 			   destdir="${basedir}/dist"
 			   optimize="true"
-			   listfiles="true">
+			   listfiles="true" includeantruntime="false">
 			
 			<include name="**/*.java" />
 		</javac>
