@@ -20,15 +20,15 @@ File stream responses are not yet implemented (Simple String handlers as example
 
 ### Issues
 
-There are lots of enhancements underway. See https://github.com/simplepanda/nio-http/issues for specifics.
+There are lots of enhancements underway. See [the issues page](https://github.com/simplepanda/nio-http/issues) for specifics.
 
 ### Example Server
 
-Demo code is up and running at http://sky.codeandstrings.com and demonstrates the server available and handling requests in it's current state.
+Demo code is [up and running](http://sky.codeandstrings.com) at and demonstrates the server available and handling requests in it's current state.
 
 ### How To Use
 
-To build the library, either checout into Eclipse and package your own JAR file (or use the code as-is in your project), or build from the command line using Apache Ant:
+To build the library, either checout into Eclipse and package your own JAR file (or use the code as-is in your project), or build from the command line using [Apache Ant](http://ant.apache.org):
 
 	# ant package
 	# file nio-http.jar 
