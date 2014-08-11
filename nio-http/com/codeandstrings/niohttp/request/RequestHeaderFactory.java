@@ -20,7 +20,14 @@ public class RequestHeaderFactory {
 	private HeaderValues headerValues;
 	
 	public RequestHeaderFactory() {
+		this.reset();
+	}
+	
+	public void reset() {
 		this.receivedLineCount = 0;
+		this.method = null;
+		this.uri = null;
+		this.protocol = null;
 		this.previousLineWasStartCommand = false;
 		this.headerValues = new HeaderValues();
 	}
@@ -167,6 +174,17 @@ public class RequestHeaderFactory {
 			}
 		}
 		 		
+	}
+	
+	public int shouldExpectBody() {		
+		
+		int r = this.headerValues.getRequestContentLength();
+		
+		if (r > 0) {
+			return r;
+		} else {
+			return -1;
+		}		
 	}
 	
 }

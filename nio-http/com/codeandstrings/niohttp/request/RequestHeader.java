@@ -35,7 +35,15 @@ public class RequestHeader {
 	public List<String> getHeaders(String name) {
 		return this.headers.getValue(name);
 	}
-
+	
+	public int getContentLength() {
+		return headers.getRequestContentLength();
+	}
+	
+	public String getContentType() {
+		return headers.getRequestContentType();
+	}
+	
 	public Set<String> getHeaderNames() {
 		return this.headers.getNames();
 	}

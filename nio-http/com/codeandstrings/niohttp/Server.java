@@ -33,11 +33,9 @@ public class Server implements Runnable {
 
 	private void configureSocketAddress() {
 		if (this.parameters.getServerIp() != null) {
-			this.socketAddress = new InetSocketAddress(
-					this.parameters.getServerIp(), this.parameters.getPort());
+			this.socketAddress = new InetSocketAddress(this.parameters.getServerIp(), this.parameters.getPort());
 		} else {
-			this.socketAddress = new InetSocketAddress(
-					this.parameters.getPort());
+			this.socketAddress = new InetSocketAddress(this.parameters.getPort());
 		}
 	}
 
@@ -84,12 +82,9 @@ public class Server implements Runnable {
 						 * part of the master selector's selection chain (for
 						 * OP_READ functions).
 						 */
-						SocketChannel connection = ((ServerSocketChannel) key
-								.channel()).accept();
+						SocketChannel connection = ((ServerSocketChannel) key.channel()).accept();
 						connection.configureBlocking(false);
 						connection.register(selector, SelectionKey.OP_READ);
-
-						System.err.println("Connection opened " + connection);
 
 					} else if (key.isReadable()) {
 

@@ -5,12 +5,12 @@ import java.io.OutputStream;
 
 public class IdealBlockSize {
 	
-	private static class MyBufferedOS extends BufferedOutputStream {
-		public MyBufferedOS() {
+	private static class ExtendedBufferedOutputStream extends BufferedOutputStream {
+		public ExtendedBufferedOutputStream() {
 			super(System.out);
 		}
 
-		public MyBufferedOS(OutputStream out) {
+		public ExtendedBufferedOutputStream(OutputStream out) {
 			super(out);
 		}
 
@@ -19,6 +19,6 @@ public class IdealBlockSize {
 		}
 	}
 
-	public static int VALUE = new IdealBlockSize.MyBufferedOS().bufferSize();
+	public static int VALUE = new IdealBlockSize.ExtendedBufferedOutputStream().bufferSize();
 	
 }

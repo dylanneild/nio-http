@@ -100,7 +100,7 @@ public class Debug {
 				if (description == null) 
 					description = "";
 				
-				r.append("<form method=\"get\">\n");
+				r.append("<form method=\"post\" action=\"/?extraValue=received_From_Get\">\n");
 				r.append("<p><strong>Name: </strong><input type=\"text\" name=\"name\" value=\"" + name + "\"></p>\n");
 				r.append("<p><strong>Address: </strong><input type=\"text\" name=\"address\" value=\"" + address + "\"></p>\n");
 				r.append("<p><strong>Description: </strong><br>\n");

@@ -4,9 +4,12 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import javax.activation.MimeType;
 
 import com.codeandstrings.niohttp.data.NameValuePair;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
@@ -17,30 +20,26 @@ public class Request {
 	private String remoteAddr;
 	private int remotePort;
 	private RequestHeader header = null;
+	private RequestBody body = null;
 
 	public static Request generateRequest(String remoteAddr, int remotePort,
-			RequestHeader header) {
+			RequestHeader header, RequestBody body) {
 
 		Request r = new Request();
 
 		r.remoteAddr = remoteAddr;
 		r.remotePort = remotePort;
 		r.header = header;
+		r.body = body;
 
 		return r;
 	}
-	
-	private List<NameValuePair> getGetParameterNameValuePairs() {
 		
-		URI uri = this.getRequestURI();
-		String query = uri.getQuery();
+	private List<NameValuePair> getFormEncodedNameValuePairs(String from) {
+		
 		ArrayList<NameValuePair> r = new ArrayList<NameValuePair>();
 		
-		if (query == null) {
-			return r;
-		}
-		
-		String[] tokens = query.split("&");
+		String[] tokens = from.split("&");
 		
 		for (int i = 0; i < tokens.length; i++) {
 			
@@ -66,9 +65,64 @@ public class Request {
 		
 	}
 	
-	private List<String> getGetParameters(String name) {
+	private List<NameValuePair> getGetParameterNameValuePairs() {
+		
+		URI uri = this.getRequestURI();
+		String query = uri.getQuery();
+		
+		if (query == null)
+			return new ArrayList();
+		else 
+			return this.getFormEncodedNameValuePairs(query);
+		
+	}
+	
+	private List<NameValuePair> getPostParameterNameValuePairs() {
+		
+		String contentType = this.header.getContentType();
+		ArrayList<NameValuePair> r = new ArrayList<NameValuePair>();
+		MimeType mimeType = null;
+				
+		try {
+			mimeType = new MimeType(contentType);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return r;
+		}
+		
+		String primary = mimeType.getBaseType();		
+		
+		if (primary == null)
+			return r;
+		if (!primary.equalsIgnoreCase("application/x-www-form-urlencoded"))
+			return r;
+						
+		String extractedCharacterSet = "ISO-8859-1";
+		
+		for (Enumeration e = mimeType.getParameters().getNames(); e.hasMoreElements(); ) {
+			String next = (String)e.nextElement();
+			
+			if (next.equalsIgnoreCase("charset")) {
+				extractedCharacterSet = mimeType.getParameter(next);
+				break;
+			}
+		}
+		
+		String query = this.body.getBytesAsString(extractedCharacterSet);
+		
+		if (query == null) {
+			return r;
+		} else {
+			return this.getFormEncodedNameValuePairs(query);
+		}
+		
+	}
+	
+	public List<String> getParameters(String name) {
 		
 		List<NameValuePair> list = getGetParameterNameValuePairs();
+		list.addAll(getPostParameterNameValuePairs());
+		
 		ArrayList<String> r = new ArrayList<String>();
 		
 		for (NameValuePair nvp : list) {			
@@ -81,9 +135,11 @@ public class Request {
 		
 	}
 	
-	private HashSet<String> getGetParameterNames() {
+	public Set<String> getParameterNames() {
 		
 		List<NameValuePair> list = getGetParameterNameValuePairs();
+		list.addAll(getPostParameterNameValuePairs());
+		
 		HashSet<String> h = new HashSet<String>();
 		
 		for (NameValuePair nvp : list) {
@@ -91,12 +147,6 @@ public class Request {
 		}
 				
 		return h;
-	}
-	
-	public List<String> getParameters(String name) {		
-		ArrayList<String> r = new ArrayList<String>();
-		r.addAll(this.getGetParameters(name));
-		return r;		
 	}
 	
 	public String getParameter(String name) {
@@ -107,12 +157,6 @@ public class Request {
 			return null;
 	}
 	
-	public Set<String> getParameterNames() {		
-		HashSet<String> r = new HashSet<String>();
-		r.addAll(getGetParameterNames());
-		return r;
-	}
-
 	public int getRemotePort() {
 		return remotePort;
 	}
@@ -143,6 +187,10 @@ public class Request {
 
 	public Set<String> getHeaderNames() {
 		return header.getHeaderNames();
+	}
+	
+	public String getContentType() {
+		return getHeader("Content-Type");
 	}
 
 	@Override

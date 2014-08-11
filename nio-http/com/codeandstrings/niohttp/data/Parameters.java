@@ -5,11 +5,13 @@ public class Parameters {
 	private int port;
 	private String serverString;
 	private String serverIp;
+	private int maximumPostSize;
 
 	private void configureDefaultParameters() {
 		this.port = 8888;
 		this.serverString = "NIO-HTTP";
 		this.serverIp = null;
+		this.maximumPostSize = (8 * 1024 * 1024);
 	}
 
 	public static Parameters getDefaultParameters() {
@@ -50,16 +52,26 @@ public class Parameters {
 		this.serverIp = serverIp;
 	}
 
+	public int getMaximumPostSize() {
+		return maximumPostSize;
+	}
+
+	public void setMaximumPostSize(int maximumPostSize) {
+		this.maximumPostSize = maximumPostSize;
+	}
+
 	@Override
 	public String toString() {
 		return "Parameters [port=" + port + ", serverString=" + serverString
-				+ ", serverIp=" + serverIp + "]";
+				+ ", serverIp=" + serverIp + ", maximumPostSize="
+				+ maximumPostSize + "]";
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + maximumPostSize;
 		result = prime * result + port;
 		result = prime * result
 				+ ((serverIp == null) ? 0 : serverIp.hashCode());
@@ -77,6 +89,8 @@ public class Parameters {
 		if (getClass() != obj.getClass())
 			return false;
 		Parameters other = (Parameters) obj;
+		if (maximumPostSize != other.maximumPostSize)
+			return false;
 		if (port != other.port)
 			return false;
 		if (serverIp == null) {
