@@ -13,6 +13,7 @@ import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
+import com.codeandstrings.niohttp.exceptions.http.InternalServerErrorException;
 import com.codeandstrings.niohttp.exceptions.http.RequestEntityTooLargeException;
 import com.codeandstrings.niohttp.handlers.RequestHandler;
 import com.codeandstrings.niohttp.handlers.StringRequestHandler;
@@ -327,7 +328,7 @@ public class Session {
 					for (int i = 0; i < bytesRead; i++) {
 	
 						if (this.requestHeaderMarker >= (this.maxRequestSize - 1)) {
-							throw new RequestEntityTooLargeException();
+							throw new InternalServerErrorException();
 						}
 	
 						this.requestHeaderData[this.requestHeaderMarker] = bytes[i];
