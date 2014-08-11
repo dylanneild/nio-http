@@ -19,21 +19,13 @@ GET/HEAD/POST requests working, as do parameter value and header value passing v
 
 File stream responses are not yet implemented.
 
-### Roadmap
+### Issues
 
-* Upgrade session system to support request bodies.
-* Upgrade request object to include POST parameter block.
-* Add and test a file response object (return a file object as a response)
-* Update Server object to support multiple handlers, mounted by URI, including wildcards.
-* Update Server object to support default URI's.
-* Update exceptions to support bodies
-* Fornalized Keep-Alive support
+There are lots of enhancements underway. See https://github.com/simplepanda/nio-http/issues for specifics.
 
 ### Example Server
 
-http://sky.codeandstrings.com
-
-This server is running demo code that shows the server up and running.
+Demo code is up and running at http://sky.codeandstrings.com and demonstrates the server available and handling requests in it's current state.
 
 ### How To Use
 
