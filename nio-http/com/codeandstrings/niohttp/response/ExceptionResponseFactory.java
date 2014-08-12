@@ -23,10 +23,11 @@ public class ExceptionResponseFactory {
 		
 		r.addHeader("Content-Length", "0");
 		r.addHeader("Connecton", "close");
+
+        System.out.println("Sending Exception: " + r.toString() + " from " + this.e.toString());
 		
 		return r;
-		
-		
+
 	}
 	
 }
