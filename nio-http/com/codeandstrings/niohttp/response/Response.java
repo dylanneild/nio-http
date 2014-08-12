@@ -42,55 +42,36 @@ public class Response {
 				+ ", headers=" + headers + ", body=" + body + "]";
 	}
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((body == null) ? 0 : body.hashCode());
-		result = prime * result + code;
-		result = prime * result
-				+ ((description == null) ? 0 : description.hashCode());
-		result = prime * result + ((headers == null) ? 0 : headers.hashCode());
-		result = prime * result + ((method == null) ? 0 : method.hashCode());
-		result = prime * result
-				+ ((protocol == null) ? 0 : protocol.hashCode());
-		return result;
-	}
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Response)) return false;
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		Response other = (Response) obj;
-		if (body == null) {
-			if (other.body != null)
-				return false;
-		} else if (!body.equals(other.body))
-			return false;
-		if (code != other.code)
-			return false;
-		if (description == null) {
-			if (other.description != null)
-				return false;
-		} else if (!description.equals(other.description))
-			return false;
-		if (headers == null) {
-			if (other.headers != null)
-				return false;
-		} else if (!headers.equals(other.headers))
-			return false;
-		if (method != other.method)
-			return false;
-		if (protocol != other.protocol)
-			return false;
-		return true;
-	}
+        Response response = (Response) o;
 
-	public int getCode() {
+        if (code != response.code) return false;
+        if (body != null ? !body.equals(response.body) : response.body != null) return false;
+        if (description != null ? !description.equals(response.description) : response.description != null)
+            return false;
+        if (headers != null ? !headers.equals(response.headers) : response.headers != null) return false;
+        if (method != response.method) return false;
+        if (protocol != response.protocol) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = protocol != null ? protocol.hashCode() : 0;
+        result = 31 * result + (method != null ? method.hashCode() : 0);
+        result = 31 * result + code;
+        result = 31 * result + (description != null ? description.hashCode() : 0);
+        result = 31 * result + (headers != null ? headers.hashCode() : 0);
+        result = 31 * result + (body != null ? body.hashCode() : 0);
+        return result;
+    }
+
+    public int getCode() {
 		return code;
 	}
 

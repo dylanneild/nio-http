@@ -26,329 +26,316 @@ import com.codeandstrings.niohttp.response.ResponseFactory;
 
 class Session$Line {
 
-	public String line;
-	public int start;
-	public int nextStart;
+    public final String line;
+    public final int start;
+    public final int nextStart;
 
-	public Session$Line(String line, int start, int nextStart) {
-		this.line = line;
-		this.start = start;
-		this.nextStart = nextStart;
-	}
+    public Session$Line(String line, int start, int nextStart) {
+        this.line = line;
+        this.start = start;
+        this.nextStart = nextStart;
+    }
 
-	@Override
-	public String toString() {
-		return "Session$Line [line=" + line + ", start=" + start
-				+ ", nextStart=" + nextStart + "]";
-	}
+    @Override
+    public String toString() {
+        return "Session$Line [line=" + line + ", start=" + start
+                + ", nextStart=" + nextStart + "]";
+    }
 
 }
 
 public class Session {
 
-	/*
-	 * Our channel and selector
-	 */
-	private SocketChannel channel;
-	private Selector selector;
-	private Parameters parameters;
-
-	// TODO: Eventually we want to migrate "maxRequestSize" to make it
-	// "maxRequestHeaderSize" -
-	// obviously a much larger POST is supported.
-
-	/*
-	 * Request acceptance data
-	 */
-	private int maxRequestSize;
-	private byte[] requestHeaderData;
-	private int requestHeaderMarker;
-	private ArrayList<Session$Line> requestHeaderLines;
-	private int lastHeaderByteLocation;
-	private ByteBuffer readBuffer;
-	private RequestHandler requestHandler;
-	private RequestHeaderFactory headerFactory = new RequestHeaderFactory();
-	private boolean bodyReadBegun;
-	private RequestBodyFactory bodyFactory = new RequestBodyFactory();
-
-	/*
-	 * Response Management
-	 */
-	private ArrayList<BufferContainer> outputQueue;
-
-	/**
-	 * Constructor.
-	 * 
-	 * @param channel
-	 * @param selector
-	 */
-	public Session(SocketChannel channel, Selector selector,
-			RequestHandler handler, Parameters parameters) {
-
-		this.channel = channel;
-		this.selector = selector;
-		this.maxRequestSize = IdealBlockSize.VALUE;
-		this.readBuffer = ByteBuffer.allocate(128);
-		this.outputQueue = new ArrayList<BufferContainer>();
-		this.requestHandler = handler;
-		this.parameters = parameters;
-
-		this.reset();
-	}
-
-	private void reset() {
-		this.requestHeaderData = new byte[maxRequestSize];
-		this.requestHeaderMarker = 0;
-		this.requestHeaderLines = new ArrayList<Session$Line>();
-		this.lastHeaderByteLocation = 0;
-		this.headerFactory = new RequestHeaderFactory();
-		this.bodyReadBegun = false;
-		this.bodyFactory = new RequestBodyFactory();
-	}
-
-	public SocketChannel getChannel() {
-		return this.channel;
-	}
-
-	private void handleRequest(Request r) throws IOException {
-
-		if (this.requestHandler instanceof StringRequestHandler) {
-
-			StringRequestHandler casted = (StringRequestHandler) this.requestHandler;
-
-			try {
-
-				Response response = ResponseFactory.createResponse(
-						casted.handleRequest(r), casted.getContentType(),
-						r.getRequestProtocol(), r.getRequestMethod(),
-						this.parameters);
-
-				if (r.getRequestProtocol() == HttpProtocol.HTTP1_0) {
-					this.outputQueue.add(new BufferContainer(response
-							.getByteBuffer(), true));
-				} else {
-					this.outputQueue.add(new BufferContainer(response
-							.getByteBuffer(), false));
-				}
-
-			} catch (HttpException e) {
-				this.generateResponseException(e);
-			}
-
-			this.socketWriteEvent();
-
-		}
-
-	}
-
-	private void generateAndHandleRequest() throws HttpException, IOException {
-
-		InetSocketAddress remote = (InetSocketAddress) this.channel
-				.getRemoteAddress();
-
-		Request r = Request.generateRequest(remote.getHostString(),
-				remote.getPort(), headerFactory.build(), bodyFactory.build());
+    /*
+     * Our channel and selector
+     */
+    private SocketChannel channel;
+    private Selector selector;
+    private Parameters parameters;
+
+    /*
+     * Request acceptance data
+     */
+    private int maxRequestSize;
+    private byte[] requestHeaderData;
+    private int requestHeaderMarker;
+    private ArrayList<Session$Line> requestHeaderLines;
+    private int lastHeaderByteLocation;
+    private ByteBuffer readBuffer;
+    private RequestHandler requestHandler;
+    private RequestHeaderFactory headerFactory;
+    private boolean bodyReadBegun;
+    private RequestBodyFactory bodyFactory;
+
+    /*
+     * Response Management
+     */
+    private ArrayList<BufferContainer> outputQueue;
+
+    /**
+     * Constructor for a new HTTP session.
+     *
+     * @param channel  The TCP this session is operating against
+     * @param selector The NIO selector this channel interacts with.
+     */
+    public Session(SocketChannel channel, Selector selector,
+                   RequestHandler handler, Parameters parameters) {
+
+        this.channel = channel;
+        this.selector = selector;
+        this.maxRequestSize = IdealBlockSize.VALUE;
+        this.readBuffer = ByteBuffer.allocate(128);
+        this.outputQueue = new ArrayList<BufferContainer>();
+        this.requestHandler = handler;
+        this.parameters = parameters;
 
-		this.handleRequest(r);
-		this.reset();
-	}
-	
-	private void copyExistingBytesToBody(int startPosition) {		
-		System.err.println("Generating body by copying existing bytes from " + startPosition);		
-		this.bodyFactory.addBytes(this.requestHeaderData, startPosition, this.lastHeaderByteLocation);		
-	}
+        this.reset();
+    }
+
+    private void reset() {
+        this.requestHeaderData = new byte[maxRequestSize];
+        this.requestHeaderMarker = 0;
+        this.requestHeaderLines = new ArrayList<Session$Line>();
+        this.lastHeaderByteLocation = 0;
+        this.headerFactory = new RequestHeaderFactory();
+        this.bodyReadBegun = false;
+        this.bodyFactory = new RequestBodyFactory();
+        this.readBuffer.clear();
+    }
 
-	private void analyzeForHeader() throws HttpException, IOException {
+    public SocketChannel getChannel() {
+        return this.channel;
+    }
 
-		// likely won't ever happen anyways, but just in case
-		// don't do this - we're already in body mode
-		if (this.bodyReadBegun) {			
-			return;
-		}
-		
-		// there is nothing to analyze
-		if (this.requestHeaderLines.size() == 0)
-			return;
+    private void handleRequest(Request r) throws IOException {
 
-		// reset our factory
-		this.headerFactory.reset();
+        if (this.requestHandler instanceof StringRequestHandler) {
 
-		// walk the received header lines.
-		for (Session$Line sessionLine : this.requestHeaderLines) {
+            StringRequestHandler casted = (StringRequestHandler) this.requestHandler;
 
-			headerFactory.addLine(sessionLine.line);
+            try {
 
-			if (headerFactory.shouldBuildRequestHeader()) {
+                Response response = ResponseFactory.createResponse(
+                        casted.handleRequest(r), casted.getContentType(),
+                        r.getRequestProtocol(), r.getRequestMethod(),
+                        this.parameters);
 
-				int requestBodySize = headerFactory.shouldExpectBody();
+                if (r.getRequestProtocol() == HttpProtocol.HTTP1_0) {
+                    this.outputQueue.add(new BufferContainer(response.getByteBuffer(), true));
+                } else {
+                    this.outputQueue.add(new BufferContainer(response.getByteBuffer(), false));
+                }
 
-				if (requestBodySize > this.parameters.getMaximumPostSize()) {
-					
-					throw new RequestEntityTooLargeException(requestBodySize);
-					
-				} else if (requestBodySize != -1) {
+            } catch (HttpException e) {
+                this.generateResponseException(e);
+            }
 
-					this.bodyFactory.resize(requestBodySize);
-					this.bodyReadBegun = true;
-					this.copyExistingBytesToBody(sessionLine.nextStart);
-					
-					if (this.bodyFactory.isFull()) {
-						this.generateAndHandleRequest();
-					}
+            this.socketWriteEvent();
 
-				} else {
-					
-					this.generateAndHandleRequest();
-					
-				}
-				
-			}
+        }
 
-		}
+    }
 
-	}
+    private void generateAndHandleRequest() throws IOException {
 
-	private void extractLines() {
+        InetSocketAddress remote = (InetSocketAddress) this.channel
+                .getRemoteAddress();
 
-		for (int i = this.lastHeaderByteLocation; i < this.requestHeaderMarker; i++) {
+        Request r = Request.generateRequest(remote.getHostString(),
+                remote.getPort(), headerFactory.build(),
+                bodyFactory.build());
 
-			if (i == 0) {
-				continue;
-			}
+        this.handleRequest(r);
+        this.reset();
 
-			if (this.requestHeaderData[i] == 10
-					&& this.requestHeaderData[i - 1] == 13) {
+    }
 
-				String line = null;
+    private void copyExistingBytesToBody(int startPosition) {
+        this.bodyFactory.addBytes(this.requestHeaderData, startPosition, this.requestHeaderMarker - startPosition);
+    }
 
-				if ((i - this.lastHeaderByteLocation - 1) == 0) {
-					line = new String();
-				} else {
-					line = new String(this.requestHeaderData,
-							this.lastHeaderByteLocation, i
-									- this.lastHeaderByteLocation - 1);
-				}
+    private void analyzeForHeader() throws HttpException, IOException {
 
-				this.requestHeaderLines.add(new Session$Line(line,
-						this.lastHeaderByteLocation, i + 1));
+        // likely won't ever happen anyways, but just in case
+        // don't do this - we're already in body mode
+        if (this.bodyReadBegun) {
+            return;
+        }
 
-				this.lastHeaderByteLocation = (i + 1);
-			}
+        // there is nothing to analyze
+        if (this.requestHeaderLines.size() == 0)
+            return;
 
-		}
+        // reset our factory
+        this.headerFactory.reset();
 
-	}
+        // walk the received header lines.
+        for (Session$Line sessionLine : this.requestHeaderLines) {
 
-	private void closeChannel() throws IOException {
+            headerFactory.addLine(sessionLine.line);
 
-		System.err.println("Connection closed " + this.channel);
-		this.channel.close();
+            if (headerFactory.shouldBuildRequestHeader()) {
 
-	}
+                int requestBodySize = headerFactory.shouldExpectBody();
 
-	private void setSelectionRequest(boolean write)
-			throws ClosedChannelException {
-
-		int ops;
+                if (requestBodySize > this.parameters.getMaximumPostSize()) {
 
-		if (write) {
-			ops = SelectionKey.OP_READ | SelectionKey.OP_WRITE;
-		} else {
-			ops = SelectionKey.OP_READ;
-		}
+                    throw new RequestEntityTooLargeException(requestBodySize);
 
-		this.channel.register(this.selector, ops, this);
-	}
+                } else if (requestBodySize != -1) {
 
-	public void socketWriteEvent() throws IOException {
+                    this.bodyFactory.resize(requestBodySize);
+                    this.bodyReadBegun = true;
+                    this.copyExistingBytesToBody(sessionLine.nextStart);
 
-		boolean closedConnection = false;
+                    if (this.bodyFactory.isFull()) {
+                        this.generateAndHandleRequest();
+                    }
 
-		if (this.outputQueue.size() > 0) {
+                }
+                else {
 
-			BufferContainer container = this.outputQueue.remove(0);
+                    this.generateAndHandleRequest();
 
-			this.channel.write(container.getBuffer());
+                }
 
-			// kill the connection?
-			if (container.isCloseOnTransmission()) {
-				System.err.println("close from socketWriteEvent");
-				this.closeChannel();
-				closedConnection = true;
-			}
-		}
+            }
 
-		if (this.outputQueue.size() == 0 && !closedConnection) {
-			this.setSelectionRequest(false);
-		}
+        }
 
-	}
+    }
 
-	private void generateResponseException(HttpException e) throws IOException {
+    private void extractLines() {
 
-		Response r = (new ExceptionResponseFactory(e)).create(this.parameters);
-		this.outputQueue.add(new BufferContainer(r.getByteBuffer(), true));
-		this.setSelectionRequest(true);
-		this.socketWriteEvent();
+        for (int i = this.lastHeaderByteLocation; i < this.requestHeaderMarker; i++) {
 
-	}
+            if (i == 0) {
+                continue;
+            }
 
-	public void socketReadEvent() throws IOException {
+            if ((this.requestHeaderData[i] == 10) && (this.requestHeaderData[i - 1] == 13)) {
 
-		try {
-			this.readBuffer.clear();
+                String line = null;
 
-			if (!this.channel.isConnected() || !this.channel.isOpen()) {
-				System.out.println("This connection is now closed.");
-				return;
-			}
+                if ((i - this.lastHeaderByteLocation - 1) == 0) {
+                    line = new String();
+                } else {
+                    line = new String(this.requestHeaderData, this.lastHeaderByteLocation, i - this.lastHeaderByteLocation - 1);
+                }
 
-			int bytesRead = this.channel.read(this.readBuffer);
+                this.requestHeaderLines.add(new Session$Line(line, this.lastHeaderByteLocation, i + 1));
+                this.lastHeaderByteLocation = (i + 1);
+            }
 
-			if (bytesRead == -1) {
-				System.err.println("close from socketReadEvent");
-				this.closeChannel();
-			} else {
+        }
 
-				byte[] bytes = new byte[bytesRead];
+    }
 
-				this.readBuffer.flip();
-				this.readBuffer.get(bytes);
-				
-				if (this.bodyReadBegun) {					
-					this.bodyFactory.addBytes(bytes);
-					
-					if (this.bodyFactory.isFull()) {
-						this.generateAndHandleRequest();
-					}					
-				}
-				else {
+    private void closeChannel() throws IOException {
+        this.channel.close();
+    }
 
-					for (int i = 0; i < bytesRead; i++) {
-	
-						if (this.requestHeaderMarker >= (this.maxRequestSize - 1)) {
-							throw new RequestEntityTooLargeException();
-						}
-	
-						this.requestHeaderData[this.requestHeaderMarker] = bytes[i];
-						this.requestHeaderMarker++;
-					}
-	
-					// header has been injested
-					this.extractLines();
-					this.analyzeForHeader();
-					
-				}
+    private void setSelectionRequest(boolean write)
+            throws ClosedChannelException {
 
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.err.println("close from exception");
-			this.closeChannel();
-		} catch (HttpException e) {
-			generateResponseException(e);
-		}
+        int ops;
 
-	}
+        if (write) {
+            ops = SelectionKey.OP_READ | SelectionKey.OP_WRITE;
+        } else {
+            ops = SelectionKey.OP_READ;
+        }
+
+        this.channel.register(this.selector, ops, this);
+
+    }
+
+    public void socketWriteEvent() throws IOException {
+
+        boolean closedConnection = false;
+
+        if (this.outputQueue.size() > 0) {
+
+            BufferContainer container = this.outputQueue.remove(0);
+
+            this.channel.write(container.getBuffer());
+
+            // kill the connection?
+            if (container.isCloseOnTransmission()) {
+                this.closeChannel();
+                closedConnection = true;
+            }
+
+        }
+
+        if (this.outputQueue.size() == 0 && !closedConnection) {
+            this.setSelectionRequest(false);
+        }
+
+    }
+
+    private void generateResponseException(HttpException e) throws IOException {
+
+        Response r = (new ExceptionResponseFactory(e)).create(this.parameters);
+        this.outputQueue.add(new BufferContainer(r.getByteBuffer(), true));
+        this.setSelectionRequest(true);
+        this.socketWriteEvent();
+
+    }
+
+    public void socketReadEvent() throws IOException {
+
+        try {
+            if (!this.channel.isConnected() || !this.channel.isOpen()) {
+                return;
+            }
+
+            int bytesRead = this.channel.read(this.readBuffer);
+
+            if (bytesRead == -1) {
+                this.closeChannel();
+            } else {
+
+                byte[] bytes = new byte[bytesRead];
+
+                this.readBuffer.flip();
+                this.readBuffer.get(bytes);
+
+                if (this.bodyReadBegun) {
+
+                    this.bodyFactory.addBytes(bytes);
+
+                    if (this.bodyFactory.isFull()) {
+                        this.generateAndHandleRequest();
+                    }
+
+                } else {
+
+                    for (int i = 0; i < bytesRead; i++) {
+
+                        if (this.requestHeaderMarker >= (this.maxRequestSize - 1)) {
+                            throw new RequestEntityTooLargeException();
+                        }
+
+                        this.requestHeaderData[this.requestHeaderMarker] = bytes[i];
+                        this.requestHeaderMarker++;
+
+                    }
+
+                    // header has been ingested
+                    this.extractLines();
+                    this.analyzeForHeader();
+
+                }
+
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            this.closeChannel();
+        } catch (HttpException e) {
+            generateResponseException(e);
+        }
+
+    }
 
 }

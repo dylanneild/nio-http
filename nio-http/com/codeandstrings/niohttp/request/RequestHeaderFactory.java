@@ -10,6 +10,9 @@ import com.codeandstrings.niohttp.exceptions.http.HttpException;
 import com.codeandstrings.niohttp.exceptions.http.HttpVersionNotSupported;
 import com.codeandstrings.niohttp.exceptions.http.MethodNotAllowedException;
 
+import static com.codeandstrings.niohttp.enums.HttpProtocol.*;
+import static com.codeandstrings.niohttp.enums.RequestMethod.*;
+
 public class RequestHeaderFactory {
 
 	private int receivedLineCount;
@@ -52,7 +55,12 @@ public class RequestHeaderFactory {
 		
 		// accept line
 		if (this.receivedLineCount == 0) {
-			
+
+            if (line.trim().length() == 0) {
+                // we can discard this; pre-request blanks are fine
+                return;
+            }
+
 			this.extractMethod(line);
 			this.extractUri(line);
 			this.extractProtocol(line);
@@ -102,19 +110,19 @@ public class RequestHeaderFactory {
 	}
 	
 	public void extractMethod(String line) throws HttpException {
-		
+
 		String tokens[] = getInitialLineTokens(line);
-		
+
 		if (tokens[0].equalsIgnoreCase("get")) {
-			this.method = RequestMethod.GET;
+			this.method = GET;
 		} else if (tokens[0].equalsIgnoreCase("post")) {
-			this.method = RequestMethod.POST;
+			this.method = POST;
 		} else if (tokens[0].equalsIgnoreCase("head")) {
-			this.method = RequestMethod.HEAD;
+			this.method = HEAD;
 		} else {
 			throw new MethodNotAllowedException(tokens[0]);
 		}
-				
+
 	}
 	
 	public void extractUri(String line) throws HttpException {
@@ -138,9 +146,9 @@ public class RequestHeaderFactory {
 			return;
 				
 		if (tokens[2].equalsIgnoreCase("http/1.0")) {
-			this.protocol = HttpProtocol.HTTP1_0;
+			this.protocol = HTTP1_0;
 		} else if (tokens[2].equalsIgnoreCase("http/1.1")) {
-			this.protocol = HttpProtocol.HTTP1_1;
+			this.protocol = HTTP1_1;
 		} else {
 			throw new HttpVersionNotSupported(tokens[2]);
 		}
@@ -160,7 +168,7 @@ public class RequestHeaderFactory {
 			// just a GET /uri so should be honored right away 
 			// with minimal fuss and no keep alive.
 			//
-			this.protocol = HttpProtocol.HTTP1_0;
+			this.protocol = HTTP1_0;
 			return true;
 		} else {
 			// was the last line sent a start command (carriage return on new line)?

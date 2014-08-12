@@ -25,7 +25,8 @@ public class Parameters {
 	}
 
 	public Parameters(int port) {
-		this.port = port;
+        this.configureDefaultParameters();
+        this.port = port;
 	}
 
 	public String getServerString() {

@@ -26,7 +26,7 @@ public class RequestBodyFactory {
 	}
 	
 	public void addBytes(byte bytes[], int start, int length) {
-		
+
 		for (int i = start; i < start + length; i++) {
 			if (bytesReceived == bodyData.length)
 				return;
@@ -38,16 +38,7 @@ public class RequestBodyFactory {
 	}
 
 	public boolean isFull() {
-		
-		System.err.println("RequestBodyFactory.isFull(): Expecting " + bodyData.length + " received " + bytesReceived);
-		
 		if (bytesReceived == bodyData.length) {
-			try {
-				System.err.println(new String(bodyData, "UTF-8"));
-			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 			return true;
 		} else {
 			return false;
@@ -83,10 +74,11 @@ public class RequestBodyFactory {
 		return true;
 	}
 
-	@Override
-	public String toString() {
-		return "RequestBodyFactory [bodyData=" + Arrays.toString(bodyData)
-				+ ", bytesReceived=" + bytesReceived + "]";
-	}
-
+    @Override
+    public String toString() {
+        return "RequestBodyFactory{" +
+                "bodyData=" + Arrays.toString(bodyData) +
+                ", bytesReceived=" + bytesReceived +
+                '}';
+    }
 }
