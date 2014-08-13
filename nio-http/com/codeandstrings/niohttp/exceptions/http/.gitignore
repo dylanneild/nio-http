@@ -5,3 +5,4 @@
 /MethodNotAllowedException.class
 /RequestEntityTooLargeException.class
 /NotFoundException.class
+/NotImplementedException.class
