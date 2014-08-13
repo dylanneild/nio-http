@@ -71,7 +71,7 @@ public class Session {
     /*
      * Response Management
      */
-    private ArrayList<Long> responseQueue;
+    private ArrayList<Request> requestQueue;
     private ArrayList<BufferContainer> outputQueue;
 
     /**
@@ -92,7 +92,7 @@ public class Session {
         this.maxRequestSize = IdealBlockSize.VALUE;
         this.readBuffer = ByteBuffer.allocate(128);
         this.outputQueue = new ArrayList<BufferContainer>();
-        this.responseQueue = new ArrayList<Long>();
+        this.requestQueue = new ArrayList<Request>();
         this.parameters = parameters;
 
         this.reset();
@@ -123,9 +123,9 @@ public class Session {
 
         boolean requestAlreadyHasPackets = false;
 
-        if (this.responseQueue.size() > 0) {
-            for (Long c : this.responseQueue) {
-                if (c.intValue() == container.getRequestId()) {
+        if (this.requestQueue.size() > 0) {
+            for (Request c : this.requestQueue) {
+                if (c.getRequestId() == container.getRequestId()) {
                     requestAlreadyHasPackets = true;
                     break;
                 }
@@ -133,7 +133,9 @@ public class Session {
         }
 
         if (!requestAlreadyHasPackets) {
-            this.responseQueue.add(container.getRequestId());
+            // This is an actual an error condition - this request
+            // should be registered by the session at generation time.
+            return;
         }
 
         this.outputQueue.add(container);
@@ -160,6 +162,11 @@ public class Session {
 
     private void copyExistingBytesToBody(int startPosition) {
         this.bodyFactory.addBytes(this.requestHeaderData, startPosition, this.requestHeaderMarker - startPosition);
+    }
+
+    private Request storeAndReturnRequest(Request request) {
+        this.requestQueue.add(request);
+        return request;
     }
 
     private Request analyzeForHeader() throws HttpException, IOException {
@@ -201,13 +208,13 @@ public class Session {
                     this.copyExistingBytesToBody(sessionLine.nextStart);
 
                     if (this.bodyFactory.isFull()) {
-                        return this.generateAndHandleRequest();
+                        return this.storeAndReturnRequest(this.generateAndHandleRequest());
                     }
 
                 }
                 else {
                     // there is no request body; go
-                    return this.generateAndHandleRequest();
+                    return this.storeAndReturnRequest(this.generateAndHandleRequest());
                 }
 
             }
@@ -262,16 +269,16 @@ public class Session {
 
     public void socketWriteEvent() throws IOException, CloseConnectionException {
 
-        if (this.responseQueue.size() == 0) {
+        if (this.requestQueue.size() == 0) {
             this.setSelectionRequest(false);
             return;
         }
 
-        long nextRequest = this.responseQueue.get(0);
+        Request nextRequest = this.requestQueue.get(0);
         BufferContainer nextContainer = null;
 
         for (BufferContainer bufferContainer : this.outputQueue) {
-            if (bufferContainer.getRequestId() == nextRequest) {
+            if (bufferContainer.getRequestId() == nextRequest.getRequestId()) {
                 nextContainer = bufferContainer;
                 break;
             }
@@ -286,12 +293,14 @@ public class Session {
         ByteBuffer bufferToWrite = nextContainer.getBuffer();
         this.channel.write(bufferToWrite);
 
-        if (!bufferToWrite.hasRemaining()) {
+        if (bufferToWrite.hasRemaining()) {
+            bufferToWrite.compact();
+        } else {
 
             this.outputQueue.remove(nextContainer);
 
             if (nextContainer.isLastBufferForRequest()) {
-                this.responseQueue.remove(0);
+                this.requestQueue.remove(0);
             }
 
             if (nextContainer.isCloseOnTransmission()) {
@@ -301,7 +310,6 @@ public class Session {
             if (this.outputQueue.size() == 0) {
                 this.setSelectionRequest(false);
             }
-
         }
 
     }
@@ -339,6 +347,11 @@ public class Session {
                     for (int i = 0; i < bytesRead; i++) {
 
                         if (this.requestHeaderMarker >= (this.maxRequestSize - 1)) {
+                            // we won't receive header blocks that are much bigger than
+                            // the maximum requst size, which is generally 8192 bytes.
+                            // Once the header has been setup the request body can
+                            // reach the maximum post in size without issue.
+                            //
                             throw new RequestEntityTooLargeException();
                         }
 
