@@ -5,7 +5,6 @@ import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.response.BufferContainer;
 import com.codeandstrings.niohttp.response.Response;
 import com.codeandstrings.niohttp.response.ResponseFactory;
-import com.sun.org.apache.bcel.internal.generic.Select;
 
 import java.nio.channels.Pipe;
 import java.nio.channels.SelectableChannel;
