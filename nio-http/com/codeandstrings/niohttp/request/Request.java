@@ -1,6 +1,6 @@
 package com.codeandstrings.niohttp.request;
 
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.util.ArrayList;
@@ -15,18 +15,49 @@ import com.codeandstrings.niohttp.data.NameValuePair;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
 
-public class Request {
+public class Request implements Externalizable {
 
+    private long sessionId;
+    private long requestId;
+    private long timestamp;
 	private String remoteAddr;
 	private int remotePort;
 	private RequestHeader header = null;
 	private RequestBody body = null;
 
-	public static Request generateRequest(String remoteAddr, int remotePort,
-			RequestHeader header, RequestBody body) {
+    public Request() {}
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeLong(this.sessionId);
+        out.writeLong(this.requestId);
+        out.writeLong(this.timestamp);
+        out.writeObject(this.remoteAddr);
+        out.writeInt(this.remotePort);
+        out.writeObject(this.header);
+        out.writeObject(this.body);
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        this.sessionId = in.readLong();
+        this.requestId = in.readLong();
+        this.timestamp = in.readLong();
+        this.remoteAddr = (String)in.readObject();
+        this.remotePort = in.readInt();
+        this.header = (RequestHeader)in.readObject();
+        this.body = (RequestBody)in.readObject();
+    }
+
+    public static Request generateRequest(long sessionId, long requestId, String remoteAddr,
+                                          int remotePort, RequestHeader header,
+                                          RequestBody body) {
 
 		Request r = new Request();
 
+        r.sessionId = sessionId;
+        r.requestId = requestId;
+        r.timestamp = System.currentTimeMillis();
 		r.remoteAddr = remoteAddr;
 		r.remotePort = remotePort;
 		r.header = header;
@@ -198,45 +229,54 @@ public class Request {
 		return getHeader("Content-Type");
 	}
 
-	@Override
-	public String toString() {
-		return "Request [remoteAddr=" + remoteAddr + ", remotePort="
-				+ remotePort + ", header=" + header + "]";
-	}
+    public long getRequestId() {
+        return this.requestId;
+    }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((header == null) ? 0 : header.hashCode());
-		result = prime * result
-				+ ((remoteAddr == null) ? 0 : remoteAddr.hashCode());
-		result = prime * result + remotePort;
-		return result;
-	}
+    public long getSessionId() {
+        return sessionId;
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		Request other = (Request) obj;
-		if (header == null) {
-			if (other.header != null)
-				return false;
-		} else if (!header.equals(other.header))
-			return false;
-		if (remoteAddr == null) {
-			if (other.remoteAddr != null)
-				return false;
-		} else if (!remoteAddr.equals(other.remoteAddr))
-			return false;
-		if (remotePort != other.remotePort)
-			return false;
-		return true;
-	}
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Request)) return false;
 
+        Request request = (Request) o;
+
+        if (remotePort != request.remotePort) return false;
+        if (requestId != request.requestId) return false;
+        if (sessionId != request.sessionId) return false;
+        if (timestamp != request.timestamp) return false;
+        if (body != null ? !body.equals(request.body) : request.body != null) return false;
+        if (header != null ? !header.equals(request.header) : request.header != null) return false;
+        if (remoteAddr != null ? !remoteAddr.equals(request.remoteAddr) : request.remoteAddr != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (sessionId ^ (sessionId >>> 32));
+        result = 31 * result + (int) (requestId ^ (requestId >>> 32));
+        result = 31 * result + (int) (timestamp ^ (timestamp >>> 32));
+        result = 31 * result + (remoteAddr != null ? remoteAddr.hashCode() : 0);
+        result = 31 * result + remotePort;
+        result = 31 * result + (header != null ? header.hashCode() : 0);
+        result = 31 * result + (body != null ? body.hashCode() : 0);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "Request{" +
+                "sessionId=" + sessionId +
+                ", requestId=" + requestId +
+                ", timestamp=" + timestamp +
+                ", remoteAddr='" + remoteAddr + '\'' +
+                ", remotePort=" + remotePort +
+                ", header=" + header +
+                ", body=" + body +
+                '}';
+    }
 }

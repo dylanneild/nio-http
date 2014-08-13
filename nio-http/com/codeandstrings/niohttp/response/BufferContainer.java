@@ -1,78 +1,93 @@
 package com.codeandstrings.niohttp.response;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class BufferContainer {
 
+    private BufferContainerHeader bufferHeader;
 	private ByteBuffer buffer;
-	private boolean closeOnTransmission;
-	private long requestId;
 
-	public long getRequestId() {
-		return requestId;
-	}
+    public BufferContainer(long sessionId, long requestId, ByteBuffer buffer, boolean closeOnTransmission, boolean lastBufferForRequest) {
+        this.bufferHeader = new BufferContainerHeader(sessionId, requestId, closeOnTransmission, lastBufferForRequest);
+        this.buffer = buffer;
+    }
 
-	public void setRequestId(long requestId) {
-		this.requestId = requestId;
-	}
+    public BufferContainer(BufferContainerHeader bufferHeader, ByteBuffer buffer) {
+        this.bufferHeader = bufferHeader;
+        this.buffer = buffer;
+    }
 
-	public ByteBuffer getBuffer() {
+    public ByteBuffer getBuffer() {
 		return buffer;
 	}
+
+    public ByteBuffer getHeaderAsByteBuffer() throws IOException {
+        this.bufferHeader.setBufferSize(this.buffer.remaining());
+        return this.bufferHeader.getAsByteBuffer();
+    }
 
 	public void setBuffer(ByteBuffer buffer) {
 		this.buffer = buffer;
 	}
 
-	public boolean isCloseOnTransmission() {
-		return closeOnTransmission;
-	}
+    public long getSessionId() {
+        return bufferHeader.getSessionId();
+    }
 
-	public void setShouldCloseOnTransmission(boolean closeOnTransmission) {
-		this.closeOnTransmission = closeOnTransmission;
-	}
+    public boolean isLastBufferForRequest() {
+        return bufferHeader.isLastBufferForRequest();
+    }
 
-	public BufferContainer(ByteBuffer buffer, boolean shouldCloseOnTransmission) {
-		super();
-		this.buffer = buffer;
-		this.closeOnTransmission = shouldCloseOnTransmission;
-	}
+    public void setSessionId(long sessionId) {
+        bufferHeader.setSessionId(sessionId);
+    }
 
-	@Override
-	public String toString() {
-		return "BufferContainer [buffer=" + buffer + ", closeOnTransmission="
-				+ closeOnTransmission + ", requestId=" + requestId + "]";
-	}
+    public long getRequestId() {
+        return bufferHeader.getRequestId();
+    }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((buffer == null) ? 0 : buffer.hashCode());
-		result = prime * result + (closeOnTransmission ? 1231 : 1237);
-		result = prime * result + (int) (requestId ^ (requestId >>> 32));
-		return result;
-	}
+    public boolean isCloseOnTransmission() {
+        return bufferHeader.isCloseOnTransmission();
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		BufferContainer other = (BufferContainer) obj;
-		if (buffer == null) {
-			if (other.buffer != null)
-				return false;
-		} else if (!buffer.equals(other.buffer))
-			return false;
-		if (closeOnTransmission != other.closeOnTransmission)
-			return false;
-		if (requestId != other.requestId)
-			return false;
-		return true;
-	}
+    public void setCloseOnTransmission(boolean closeOnTransmission) {
+        bufferHeader.setCloseOnTransmission(closeOnTransmission);
+    }
 
+    public void setLastBufferForRequest(boolean lastBufferForRequest) {
+        bufferHeader.setLastBufferForRequest(lastBufferForRequest);
+    }
+
+    public void setRequestId(long requestId) {
+        bufferHeader.setRequestId(requestId);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof BufferContainer)) return false;
+
+        BufferContainer that = (BufferContainer) o;
+
+        if (buffer != null ? !buffer.equals(that.buffer) : that.buffer != null) return false;
+        if (bufferHeader != null ? !bufferHeader.equals(that.bufferHeader) : that.bufferHeader != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = bufferHeader != null ? bufferHeader.hashCode() : 0;
+        result = 31 * result + (buffer != null ? buffer.hashCode() : 0);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "BufferContainer{" +
+                "bufferHeader=" + bufferHeader +
+                ", buffer=" + buffer +
+                '}';
+    }
 }

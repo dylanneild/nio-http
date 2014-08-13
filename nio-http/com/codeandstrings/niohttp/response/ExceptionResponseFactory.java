@@ -16,16 +16,15 @@ public class ExceptionResponseFactory {
 	
 	public Response create(Parameters parameters) {
 		
-		Response r = new Response(HttpProtocol.HTTP1_1, RequestMethod.GET, parameters);
-		
+		Response r = new Response(HttpProtocol.HTTP1_1, RequestMethod.GET);
+
 		r.setCode(this.e.getCode());
 		r.setDescription(this.e.getDescription());
-		
+
+        r.addHeader("Server", parameters.getServerString());
 		r.addHeader("Content-Length", "0");
 		r.addHeader("Connecton", "close");
 
-        System.out.println("Sending Exception: " + r.toString() + " from " + this.e.toString());
-		
 		return r;
 
 	}

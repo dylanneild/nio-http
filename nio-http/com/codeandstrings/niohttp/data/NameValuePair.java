@@ -1,6 +1,8 @@
 package com.codeandstrings.niohttp.data;
 
-public class NameValuePair {
+import java.io.*;
+
+public class NameValuePair implements Externalizable {
 
 	private String name;
 	private String value;
@@ -28,6 +30,8 @@ public class NameValuePair {
 		this.name = name;
 		this.value = value;
 	}
+
+    public NameValuePair() {}
 
 	@Override
 	public String toString() {
@@ -65,4 +69,15 @@ public class NameValuePair {
 		return true;
 	}
 
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeObject(this.name);
+        out.writeObject(this.value);
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        this.name = (String)in.readObject();
+        this.value = (String)in.readObject();
+    }
 }

@@ -1,15 +1,26 @@
 package com.codeandstrings.niohttp.data;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class HeaderValues {
+public class HeaderValues implements Externalizable {
 
 	private ArrayList<NameValuePair> headers;
 
-	@Override
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        this.headers = (ArrayList<NameValuePair>)in.readObject();
+    }
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeObject(this.headers);
+    }
+
+    @Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
@@ -39,9 +50,13 @@ public class HeaderValues {
 		return "HeaderValues [headers=" + headers + "]";
 	}
 
-	public HeaderValues() {
-		this.headers = new ArrayList<NameValuePair>();
-	}
+    public HeaderValues(boolean initialize) {
+        if (initialize) {
+            this.headers = new ArrayList<NameValuePair>();
+        }
+    }
+
+    public HeaderValues() {}
 
 	public List<String> getValue(String name) {
 		

@@ -19,12 +19,10 @@ public class Response {
 	private HeaderValues headers;
 	private ByteBuffer body;
 
-	public Response(HttpProtocol protocol, RequestMethod method,
-			Parameters parameters) {
+	public Response(HttpProtocol protocol, RequestMethod method) {
 		this.protocol = protocol;
 		this.method = method;
-		this.headers = new HeaderValues();
-		this.headers.addHeader("Server", parameters.getServerString());
+		this.headers = new HeaderValues(true);
 	}
 
 	public void addHeader(String name, String value) {
@@ -123,7 +121,7 @@ public class Response {
 
 		}
 
-		// should we be sending an answer?
+		// should we be sending a body?
 		boolean responseBodyNeeded = true;
 
 		if (this.method == RequestMethod.HEAD) {

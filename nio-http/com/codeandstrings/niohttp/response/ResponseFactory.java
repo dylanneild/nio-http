@@ -10,9 +10,9 @@ import com.codeandstrings.niohttp.exceptions.http.HttpException;
 public class ResponseFactory {
 
 	public static Response createResponse(String content, String contentType,
-			HttpProtocol protocol, RequestMethod method, Parameters parameters) {
+			HttpProtocol protocol, RequestMethod method) {
 
-		Response r = new Response(protocol, method, parameters);
+		Response r = new Response(protocol, method);
 
 		if (protocol == HttpProtocol.HTTP1_1) {
 			r.setCode(200);
