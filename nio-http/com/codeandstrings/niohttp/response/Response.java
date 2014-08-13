@@ -87,11 +87,6 @@ public class Response {
 
 	public ByteBuffer getByteBuffer() {
 
-		// this needs overhauling - right now we're just reading a simple
-		// header but as data gets larger and includes streams
-		// we'll need to make this more complex - indicate to the channel
-		// that we're here and working, etc.
-
 		ByteBuffer buffer = ByteBuffer.allocate(IdealBlockSize.VALUE);
 
 		if (this.protocol == HttpProtocol.HTTP1_1) {

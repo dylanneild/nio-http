@@ -13,39 +13,51 @@ public class RequestReader {
     private Pipe.SourceChannel channel;
     private ByteBuffer currentSizeBuffer;
     private ByteBuffer currentRequestBuffer;
+    private boolean currentSizeDone;
+    private boolean currentRequestDone;
+
+    private void reset() {
+        this.currentSizeBuffer = null;
+        this.currentRequestBuffer = null;
+        this.currentSizeDone = false;
+        this.currentRequestDone = false;
+    }
 
     public RequestReader(Pipe.SourceChannel channel) {
         this.channel = channel;
-        this.currentSizeBuffer = null;
-        this.currentRequestBuffer = null;
+        this.reset();
     }
 
     private boolean executeRequestReadRequestSize() throws IOException {
 
         // read the size buffer
-        if (this.currentSizeBuffer == null) {
+        if (!this.currentSizeDone) {
+            if (this.currentSizeBuffer == null) {
 
-            this.currentSizeBuffer = ByteBuffer.allocate(Integer.SIZE / 8);
-            this.channel.read(this.currentSizeBuffer);
+                this.currentSizeBuffer = ByteBuffer.allocate(Integer.SIZE / 8);
+                this.channel.read(this.currentSizeBuffer);
 
-            if (this.currentSizeBuffer.hasRemaining()) {
-                return false;
-            } else {
-                this.currentSizeBuffer.flip();
-                return true;
+                if (this.currentSizeBuffer.hasRemaining()) {
+                    return false;
+                } else {
+                    this.currentSizeBuffer.flip();
+                    this.currentSizeDone = true;
+                    return true;
+                }
+
+            } else if (this.currentSizeBuffer.hasRemaining()) {
+
+                this.channel.read(this.currentSizeBuffer);
+
+                if (this.currentSizeBuffer.hasRemaining()) {
+                    return false;
+                } else {
+                    this.currentSizeBuffer.flip();
+                    this.currentSizeDone = true;
+                    return true;
+                }
+
             }
-
-        } else if (this.currentSizeBuffer.hasRemaining()) {
-
-            this.channel.read(this.currentSizeBuffer);
-
-            if (this.currentSizeBuffer.hasRemaining()) {
-                return false;
-            } else {
-                this.currentSizeBuffer.flip();
-                return true;
-            }
-
         }
 
         this.currentSizeBuffer.rewind();
@@ -57,34 +69,51 @@ public class RequestReader {
     private boolean executeRequestReadRequest(int size) throws IOException {
 
         // read the request buffer
-        if (this.currentRequestBuffer == null) {
+        if (!this.currentRequestDone) {
+            if (this.currentRequestBuffer == null) {
 
-            this.currentRequestBuffer = ByteBuffer.allocate(size);
-            this.channel.read(this.currentRequestBuffer);
+                this.currentRequestBuffer = ByteBuffer.allocate(size);
+                this.channel.read(this.currentRequestBuffer);
 
-            if (this.currentRequestBuffer.hasRemaining()) {
-                return false;
-            } else {
-                this.currentRequestBuffer.flip();
-                return true;
+                if (this.currentRequestBuffer.hasRemaining()) {
+                    return false;
+                } else {
+                    this.currentRequestBuffer.flip();
+                    this.currentRequestDone = true;
+                    return true;
+                }
+
+            } else if (this.currentRequestBuffer.hasRemaining()) {
+
+                this.channel.read(this.currentRequestBuffer);
+
+                if (this.currentRequestBuffer.hasRemaining()) {
+                    return false;
+                } else {
+                    this.currentRequestBuffer.flip();
+                    this.currentRequestDone = true;
+                    return true;
+                }
+
             }
-
-        } else if (this.currentRequestBuffer.hasRemaining()) {
-
-            this.channel.read(this.currentRequestBuffer);
-
-            if (this.currentRequestBuffer.hasRemaining()) {
-                return false;
-            } else {
-                this.currentRequestBuffer.flip();
-                return true;
-            }
-
         }
 
         this.currentRequestBuffer.rewind();
 
         return true;
+
+    }
+
+    private Request getRequest() throws IOException, ClassNotFoundException {
+
+        ByteArrayInputStream bais = new ByteArrayInputStream(currentRequestBuffer.array());
+        ObjectInputStream ois = new ObjectInputStream(bais);
+
+        Request r = (Request)ois.readObject();
+
+        ois.close();
+
+        return r;
 
     }
 
@@ -111,15 +140,9 @@ public class RequestReader {
             return null;
         }
 
-        ByteArrayInputStream bais = new ByteArrayInputStream(currentRequestBuffer.array());
-        ObjectInputStream ois = new ObjectInputStream(bais);
+        Request r = getRequest();
 
-        Request r = (Request)ois.readObject();
-
-        ois.close();
-
-        this.currentSizeBuffer = null;
-        this.currentRequestBuffer = null;
+        this.reset();
 
         return r;
 
