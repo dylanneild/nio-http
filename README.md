@@ -6,7 +6,8 @@ A non-blocking I/O HTTP server library for Java 7.
 ### Requirements
 
 * Java 7
-* Eclipse for build environment
+* Apache Ant for command line building
+* Eclipse or IDEA (or the IDEA of your choice) for development 
 
 ### Can I help?
 
