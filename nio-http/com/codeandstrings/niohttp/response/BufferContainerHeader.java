@@ -3,13 +3,33 @@ package com.codeandstrings.niohttp.response;
 import java.io.*;
 import java.nio.ByteBuffer;
 
-public class BufferContainerHeader implements Serializable {
+public class BufferContainerHeader implements Externalizable {
 
     private long sessionId;
     private long requestId;
     private boolean closeOnTransmission;
     private boolean lastBufferForRequest;
     private int bufferSize;
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        this.sessionId = in.readLong();
+        this.requestId = in.readLong();
+        this.closeOnTransmission = in.readBoolean();
+        this.lastBufferForRequest = in.readBoolean();
+        this.bufferSize = in.readInt();
+    }
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeLong(this.sessionId);
+        out.writeLong(this.requestId);
+        out.writeBoolean(this.closeOnTransmission);
+        out.writeBoolean(this.lastBufferForRequest);
+        out.writeInt(this.bufferSize);
+    }
+
+    public BufferContainerHeader() {}
 
     public BufferContainerHeader(long sessionId, long requestId, boolean closeOnTransmission, boolean lastBufferForRequest) {
         this.sessionId = sessionId;
