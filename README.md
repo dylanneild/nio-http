@@ -1,7 +1,7 @@
 nio-http
 ========
 
-A non-blocking I/O HTTP server library for Java 7.
+A non-blocking / hybdrid I/O HTTP server library for Java 7.
 
 ### Requirements
 
