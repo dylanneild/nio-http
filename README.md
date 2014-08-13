@@ -28,7 +28,7 @@ By combining file system server, fast CGI and proxy handlers a full production d
 
 * Java 7
 * Apache Ant for command line building
-* Eclipse or IDEA (or the IDEA of your choice) for development 
+* Eclipse or IDEA (or the IDE of your choice) for development 
 
 ### Can I help?
 
