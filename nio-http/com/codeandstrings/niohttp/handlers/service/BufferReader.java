@@ -29,6 +29,7 @@ public class BufferReader {
         this.currentHeaderDone = false;
         this.currentBufferDone = false;
     }
+    
     public BufferReader(Pipe.SourceChannel channel) {
         this.channel = channel;
         this.reset();
@@ -78,16 +79,12 @@ public class BufferReader {
         if (!this.currentHeaderDone) {
             if (this.currentHeaderBuffer == null) {
 
-                System.out.println("Reading header of " + size + " bytes");
-
                 this.currentHeaderBuffer = ByteBuffer.allocate(size);
                 this.channel.read(this.currentHeaderBuffer);
 
                 if (this.currentHeaderBuffer.hasRemaining()) {
-                    System.out.println("Header not fully read on first pass. Retrying.");
                     return false;
                 } else {
-                    System.out.println("Header read on first pass - flipping/done.");
                     this.currentHeaderBuffer.flip();
                     this.currentHeaderDone = true;
                     return true;
@@ -95,15 +92,11 @@ public class BufferReader {
 
             } else if (this.currentHeaderBuffer.hasRemaining()) {
 
-                System.out.println("Re-Reading header of " + size + " bytes");
-
                 this.channel.read(this.currentHeaderBuffer);
 
                 if (this.currentHeaderBuffer.hasRemaining()) {
-                    System.out.println("Header not fully read on second pass. Retrying.");
                     return false;
                 } else {
-                    System.out.println("Header read on second pass - flipping/done.");
                     this.currentHeaderBuffer.flip();
                     this.currentHeaderDone = true;
                     return true;
@@ -111,8 +104,6 @@ public class BufferReader {
 
             }
         }
-
-        System.out.println("Header already read - rewinding buffer.");
 
         this.currentHeaderBuffer.rewind();
 
@@ -122,7 +113,7 @@ public class BufferReader {
 
     private boolean executeBufferRead(int size) throws IOException {
 
-        // read the request buffer
+        // read the actual buffer
         if (!this.currentBufferDone) {
             if (this.currentBuffer == null) {
 
@@ -158,6 +149,19 @@ public class BufferReader {
 
     }
 
+    private BufferContainerHeader getContainerHeader() throws IOException, ClassNotFoundException {
+ 
+    	ByteArrayInputStream bais = new ByteArrayInputStream(currentHeaderBuffer.array());
+        ObjectInputStream ois = new ObjectInputStream(bais);
+
+        BufferContainerHeader header = (BufferContainerHeader)ois.readObject();
+
+        ois.close();
+        
+        return header;
+          
+    }
+    
     public BufferContainer readBufferFromChannel() throws IOException, ClassNotFoundException {
 
         if (!executeBufferReadSize()) {
@@ -166,20 +170,11 @@ public class BufferReader {
 
         int requestBufferSize = this.currentSizeBuffer.getInt();
 
-        System.out.println("Header buffer should be " + requestBufferSize + " bytes.");
-
         if (!executeBufferReadHeader(requestBufferSize)) {
             return null;
         }
 
-        System.out.println("Beginning deserialization of class with " + currentHeaderBuffer.array().length + " read bytes.");
-
-        ByteArrayInputStream bais = new ByteArrayInputStream(currentHeaderBuffer.array());
-        ObjectInputStream ois = new ObjectInputStream(bais);
-
-        BufferContainerHeader header = (BufferContainerHeader)ois.readObject();
-
-        ois.close();
+        BufferContainerHeader header = getContainerHeader();
 
         if (!executeBufferRead(header.getBufferSize())) {
             return null;

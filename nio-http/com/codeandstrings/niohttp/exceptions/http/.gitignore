@@ -1,0 +1,8 @@
+/BadRequestException.class
+/HttpException.class
+/HttpVersionNotSupported.class
+/InternalServerErrorException.class
+/MethodNotAllowedException.class
+/RequestEntityTooLargeException.class
+/NotFoundException.class
+/NotImplementedException.class
