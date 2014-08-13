@@ -63,6 +63,8 @@ public class BufferReader {
         // read the request buffer
         if (this.currentHeaderBuffer == null) {
 
+            System.out.println("Reading header of " + size + " bytes");
+
             this.currentHeaderBuffer = ByteBuffer.allocate(size);
             this.channel.read(this.currentHeaderBuffer);
 
