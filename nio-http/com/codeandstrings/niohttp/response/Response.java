@@ -110,9 +110,8 @@ public class Response {
 			byte bytes[] = null;
 
 			try {
-				bytes = s.getBytes("US-ASCII");
+				bytes = s.getBytes("ISO-8859-1");
 			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 				return null;
 			}
