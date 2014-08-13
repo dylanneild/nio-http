@@ -1,7 +1,28 @@
 nio-http
 ========
 
-A non-blocking / hybdrid I/O HTTP server library for Java 7.
+A hybrid design HTTP server library for Java 7.
+
+### Architecture
+
+NIO-HTTP uses a hybrid design architecture to process requests: 
+
+##### Core Service
+Server and Client sockets are all registered against a master selector and data is read/written (and connections are accepeted) using an non-blocking event system with buffered reading and writing. The core of NIO-HTTP can handle thousands of simultaneous connections with minimal CPU load. In addition to TCP socket management, the core service handles connectivity with handler services, where HTTP responses are generated. In effect, the core service is a master connection routing binding HTTP clients to handler services.
+
+##### Handler Services
+Once the core services reads client requests, handler services generate the responses. Handler services operate in their own threads and can be crafted to meet the needs of the implementing code. Each handler communicates with the core service via a non-blocking channel, allowing handler input and output to integrate with the core service directly.
+
+At present, the following handler services are working/planned: 
+
+* String (return textual response data)
+* File System Server (serves files from a folder like a traditional web server)
+* FastCGI (send data to a FastCGI server for further processing by PHP, Ruby, etc)
+* HTTP Proxy (proxy requests onto another HTTP server)
+
+Any combination of handlers can be used and assigned to URIs. Multiple handlers assigned to the same URI are automatically load balanced in round-robin.
+
+By combining file system server, fast CGI and proxy handlers a full production deployable web service can be quickly created with minimal additional code.
 
 ### Requirements
 
