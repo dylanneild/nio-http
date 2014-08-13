@@ -35,8 +35,6 @@ public class BufferWriter {
         this.currentSizeBuffer = ByteBuffer.allocate(Integer.SIZE / 8).putInt(currentHeaderBuffer.capacity());
         this.currentDataBuffer = container.getBuffer();
 
-        System.out.println("Sending buffer header of " + currentHeaderBuffer.capacity() + " bytes");
-
         this.currentHeaderBuffer.flip();
         this.currentSizeBuffer.flip();
 

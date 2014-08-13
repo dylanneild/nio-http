@@ -13,43 +13,58 @@ import java.nio.channels.Pipe;
 public class BufferReader {
 
     private Pipe.SourceChannel channel;
+
     private ByteBuffer currentSizeBuffer;
     private ByteBuffer currentHeaderBuffer;
     private ByteBuffer currentBuffer;
 
-    public BufferReader(Pipe.SourceChannel channel) {
-        this.channel = channel;
+    private boolean currentSizeDone;
+    private boolean currentHeaderDone;
+    private boolean currentBufferDone;
+
+    private void reset() {
         this.currentSizeBuffer = null;
         this.currentHeaderBuffer = null;
         this.currentBuffer = null;
+        this.currentSizeDone = false;
+        this.currentHeaderDone = false;
+        this.currentBufferDone = false;
+    }
+    public BufferReader(Pipe.SourceChannel channel) {
+        this.channel = channel;
+        this.reset();
     }
 
     private boolean executeBufferReadSize() throws IOException {
 
         // read the size buffer
-        if (this.currentSizeBuffer == null) {
+        if (!this.currentSizeDone) {
+            if (this.currentSizeBuffer == null) {
 
-            this.currentSizeBuffer = ByteBuffer.allocate(Integer.SIZE / 8);
-            this.channel.read(this.currentSizeBuffer);
+                this.currentSizeBuffer = ByteBuffer.allocate(Integer.SIZE / 8);
+                this.channel.read(this.currentSizeBuffer);
 
-            if (this.currentSizeBuffer.hasRemaining()) {
-                return false;
-            } else {
-                this.currentSizeBuffer.flip();
-                return true;
+                if (this.currentSizeBuffer.hasRemaining()) {
+                    return false;
+                } else {
+                    this.currentSizeBuffer.flip();
+                    this.currentSizeDone = true;
+                    return true;
+                }
+
+            } else if (this.currentSizeBuffer.hasRemaining()) {
+
+                this.channel.read(this.currentSizeBuffer);
+
+                if (this.currentSizeBuffer.hasRemaining()) {
+                    return false;
+                } else {
+                    this.currentSizeBuffer.flip();
+                    this.currentSizeDone = true;
+                    return true;
+                }
+
             }
-
-        } else if (this.currentSizeBuffer.hasRemaining()) {
-
-            this.channel.read(this.currentSizeBuffer);
-
-            if (this.currentSizeBuffer.hasRemaining()) {
-                return false;
-            } else {
-                this.currentSizeBuffer.flip();
-                return true;
-            }
-
         }
 
         this.currentSizeBuffer.rewind();
@@ -61,37 +76,41 @@ public class BufferReader {
     private boolean executeBufferReadHeader(int size) throws IOException {
 
         // read the request buffer
-        if (this.currentHeaderBuffer == null) {
+        if (!this.currentHeaderDone) {
+            if (this.currentHeaderBuffer == null) {
 
-            System.out.println("Reading header of " + size + " bytes");
+                System.out.println("Reading header of " + size + " bytes");
 
-            this.currentHeaderBuffer = ByteBuffer.allocate(size);
-            this.channel.read(this.currentHeaderBuffer);
+                this.currentHeaderBuffer = ByteBuffer.allocate(size);
+                this.channel.read(this.currentHeaderBuffer);
 
-            if (this.currentHeaderBuffer.hasRemaining()) {
-                System.out.println("Header not fully read on first pass. Retrying.");
-                return false;
-            } else {
-                System.out.println("Header read on first pass - flipping/done.");
-                this.currentHeaderBuffer.flip();
-                return true;
+                if (this.currentHeaderBuffer.hasRemaining()) {
+                    System.out.println("Header not fully read on first pass. Retrying.");
+                    return false;
+                } else {
+                    System.out.println("Header read on first pass - flipping/done.");
+                    this.currentHeaderBuffer.flip();
+                    this.currentHeaderDone = true;
+                    return true;
+                }
+
+            } else if (this.currentHeaderBuffer.hasRemaining()) {
+
+                System.out.println("Re-Reading header of " + size + " bytes");
+
+                this.channel.read(this.currentHeaderBuffer);
+
+                if (this.currentHeaderBuffer.hasRemaining()) {
+                    System.out.println("Header not fully read on second pass. Retrying.");
+                    return false;
+                } else {
+                    System.out.println("Header read on second pass - flipping/done.");
+                    this.currentHeaderBuffer.flip();
+                    this.currentHeaderDone = true;
+                    return true;
+                }
+
             }
-
-        } else if (this.currentHeaderBuffer.hasRemaining()) {
-
-            System.out.println("Re-Reading header of " + size + " bytes");
-
-            this.channel.read(this.currentHeaderBuffer);
-
-            if (this.currentHeaderBuffer.hasRemaining()) {
-                System.out.println("Header not fully read on second pass. Retrying.");
-                return false;
-            } else {
-                System.out.println("Header read on second pass - flipping/done.");
-                this.currentHeaderBuffer.flip();
-                return true;
-            }
-
         }
 
         System.out.println("Header already read - rewinding buffer.");
@@ -105,29 +124,33 @@ public class BufferReader {
     private boolean executeBufferRead(int size) throws IOException {
 
         // read the request buffer
-        if (this.currentBuffer == null) {
+        if (!this.currentBufferDone) {
+            if (this.currentBuffer == null) {
 
-            this.currentBuffer = ByteBuffer.allocate(size);
-            this.channel.read(this.currentBuffer);
+                this.currentBuffer = ByteBuffer.allocate(size);
+                this.channel.read(this.currentBuffer);
 
-            if (this.currentBuffer.hasRemaining()) {
-                return false;
-            } else {
-                this.currentBuffer.flip();
-                return true;
+                if (this.currentBuffer.hasRemaining()) {
+                    return false;
+                } else {
+                    this.currentBuffer.flip();
+                    this.currentBufferDone = true;
+                    return true;
+                }
+
+            } else if (this.currentBuffer.hasRemaining()) {
+
+                this.channel.read(this.currentBuffer);
+
+                if (this.currentBuffer.hasRemaining()) {
+                    return false;
+                } else {
+                    this.currentBuffer.flip();
+                    this.currentBufferDone = true;
+                    return true;
+                }
+
             }
-
-        } else if (this.currentBuffer.hasRemaining()) {
-
-            this.channel.read(this.currentBuffer);
-
-            if (this.currentBuffer.hasRemaining()) {
-                return false;
-            } else {
-                this.currentBuffer.flip();
-                return true;
-            }
-
         }
 
         this.currentBuffer.rewind();
@@ -165,9 +188,7 @@ public class BufferReader {
 
         BufferContainer r = new BufferContainer(header, this.currentBuffer);
 
-        this.currentSizeBuffer = null;
-        this.currentHeaderBuffer = null;
-        this.currentBuffer = null;
+        this.reset();
 
         return r;
 
