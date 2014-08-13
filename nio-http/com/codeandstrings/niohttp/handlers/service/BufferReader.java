@@ -69,24 +69,32 @@ public class BufferReader {
             this.channel.read(this.currentHeaderBuffer);
 
             if (this.currentHeaderBuffer.hasRemaining()) {
+                System.out.println("Header not fully read on first pass. Retrying.");
                 return false;
             } else {
+                System.out.println("Header read on first pass - flipping/done.");
                 this.currentHeaderBuffer.flip();
                 return true;
             }
 
         } else if (this.currentHeaderBuffer.hasRemaining()) {
 
+            System.out.println("Re-Reading header of " + size + " bytes");
+
             this.channel.read(this.currentHeaderBuffer);
 
             if (this.currentHeaderBuffer.hasRemaining()) {
+                System.out.println("Header not fully read on second pass. Retrying.");
                 return false;
             } else {
+                System.out.println("Header read on second pass - flipping/done.");
                 this.currentHeaderBuffer.flip();
                 return true;
             }
 
         }
+
+        System.out.println("Header already read - rewinding buffer.");
 
         this.currentHeaderBuffer.rewind();
 
@@ -136,9 +144,13 @@ public class BufferReader {
 
         int requestBufferSize = this.currentSizeBuffer.getInt();
 
+        System.out.println("Header buffer should be " + requestBufferSize + " bytes.");
+
         if (!executeBufferReadHeader(requestBufferSize)) {
             return null;
         }
+
+        System.out.println("Beginning deserialization of class with " + currentHeaderBuffer.array().length + " read bytes.");
 
         ByteArrayInputStream bais = new ByteArrayInputStream(currentHeaderBuffer.array());
         ObjectInputStream ois = new ObjectInputStream(bais);
