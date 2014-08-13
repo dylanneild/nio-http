@@ -32,7 +32,7 @@ public class RequestHeaderFactory {
 		this.uri = null;
 		this.protocol = null;
 		this.previousLineWasStartCommand = false;
-		this.headerValues = new HeaderValues();
+		this.headerValues = new HeaderValues(true);
 	}
 	
 	public RequestHeader build() {
@@ -49,7 +49,7 @@ public class RequestHeaderFactory {
 	}
 	
 	public void addLine(String line) throws HttpException {
-		
+
 		// reset previous line indication
 		this.previousLineWasStartCommand = false;
 		
@@ -175,7 +175,7 @@ public class RequestHeaderFactory {
 			// if so, indicate the request should be built and go
 			// otherwise keep accepting new data...
 			//
-			if (this.previousLineWasStartCommand) { 
+			if (this.previousLineWasStartCommand) {
 				return true;
 			} else {
 				return false;

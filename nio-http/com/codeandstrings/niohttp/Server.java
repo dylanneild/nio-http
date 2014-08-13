@@ -2,15 +2,19 @@ package com.codeandstrings.niohttp;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.SelectableChannel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import com.codeandstrings.niohttp.data.Parameters;
-import com.codeandstrings.niohttp.handlers.RequestHandler;
+import com.codeandstrings.niohttp.exceptions.http.HttpException;
+import com.codeandstrings.niohttp.exceptions.http.NotImplementedException;
+import com.codeandstrings.niohttp.exceptions.tcp.CloseConnectionException;
+import com.codeandstrings.niohttp.handlers.service.RequestHandler;
+import com.codeandstrings.niohttp.request.Request;
+import com.codeandstrings.niohttp.response.BufferContainer;
+import com.codeandstrings.niohttp.response.ExceptionResponseFactory;
+import com.codeandstrings.niohttp.response.Response;
 
 public class Server implements Runnable {
 
@@ -18,13 +22,13 @@ public class Server implements Runnable {
 	private InetSocketAddress socketAddress;
 	private ServerSocketChannel serverSocketChannel;
 	private RequestHandler requestHandler;
+    private Thread handlerThread;
+    private HashMap<Long,Session> sessions;
 
 	public Server() {
 		this.parameters = Parameters.getDefaultParameters();
-	}
-
-	public Parameters getParameters() {
-		return parameters;
+        this.sessions = new HashMap<Long,Session>();
+        Thread.currentThread().setName("NIO-HTTP Selection Thread");
 	}
 
 	public void setParameters(Parameters parameters) {
@@ -40,7 +44,11 @@ public class Server implements Runnable {
 	}
 
 	public void setRequestHandler(RequestHandler requestHandler) {
-		this.requestHandler = requestHandler;
+
+        this.requestHandler = requestHandler;
+        this.handlerThread = new Thread(this.requestHandler);
+        this.handlerThread.start();
+
 	}
 
 	private void configureServerSocketChannel() throws IOException {
@@ -60,6 +68,7 @@ public class Server implements Runnable {
 			Selector selector = Selector.open();
 
 			this.serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+            this.requestHandler.getEngineSource().register(selector, SelectionKey.OP_READ);
 
 			while (true) {
 
@@ -89,10 +98,12 @@ public class Server implements Runnable {
 					} else if (key.isReadable()) {
 
 						SelectableChannel channel = key.channel();
-						Session session = (Session) key.attachment();
 
 						if (channel instanceof SocketChannel) {
-							if (session == null) {
+
+                            Session session = (Session) key.attachment();
+
+                            if (session == null) {
 								/*
 								 * The selector has triggered because a socket
 								 * has generated a read event and there is
@@ -101,31 +112,86 @@ public class Server implements Runnable {
 								 * session.
 								 */
 								session = new Session((SocketChannel) channel,
-										selector, this.requestHandler,
-										this.parameters);
+										selector, this.parameters);
 
-								key.attach(session);
+                                this.sessions.put(session.getSessionId(), session);
+
+                                key.attach(session);
+
+                                // store the session in a session store for retrieval;
 							}
 
-							session.socketReadEvent();
-						} else {
-							// this is unimplemented and would be another stream
-							// read event, indicating
-							// that some form of response stream data is ready
-							// to be read.
+							try {
+
+                                Request request = session.socketReadEvent();
+
+                                if (request != null) {
+
+                                    session.reset();
+
+                                    if (this.requestHandler == null) {
+                                        throw new NotImplementedException();
+                                    } else {
+                                        this.requestHandler.sendRequest(request);
+                                        this.requestHandler.getEngineSink().register(selector, SelectionKey.OP_WRITE);
+                                    }
+                                }
+
+                            } catch (CloseConnectionException e) {
+
+                                this.sessions.remove(session.getSessionId());
+                                session.getChannel().close();
+
+                            } catch (HttpException e) {
+
+                                Response r = (new ExceptionResponseFactory(e)).create(this.parameters);
+
+                                BufferContainer container = new BufferContainer(session.getSessionId(),
+                                        -1, r.getByteBuffer(), true, true);
+
+                                session.queueBuffer(container);
+
+                            }
+
+						} else if (channel instanceof Pipe.SourceChannel) {
+
+                            Pipe.SourceChannel sourceChannel = (Pipe.SourceChannel)channel;
+
+                            BufferContainer container = (BufferContainer)this.requestHandler.executeBufferReadEvent();
+
+                            if (container != null) {
+                                Session session = this.sessions.get(container.getSessionId());
+
+                                if (session != null) {
+                                    session.queueBuffer(container);
+                                }
+                            }
+
 						}
+
 					} else if (key.isWritable()) {
 
-						// we don't care if this is anything other than a
-						// socketchannel
-						// because we only write to socket channels (server does
-						// no file manipulation)
+                        SelectableChannel channel = key.channel();
 
-						// if this triggers NullPointerException something
-						// horribly wrong has happened.
+                        if (channel instanceof SocketChannel) {
 
-						Session session = (Session) key.attachment();
-						session.socketWriteEvent();
+                            Session session = (Session) key.attachment();
+
+                            try {
+                                session.socketWriteEvent();
+                            }
+                            catch (CloseConnectionException e) {
+                                this.sessions.remove(session.getSessionId());
+                                session.getChannel().close();
+                            }
+
+                        } else if (channel instanceof Pipe.SinkChannel) {
+
+                            if (!this.requestHandler.executeRequestWriteEvent()) {
+                                channel.register(selector, 0);
+                            }
+
+                        }
 
 					}
 
@@ -138,7 +204,11 @@ public class Server implements Runnable {
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(-1);
-		}
+		} catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            System.exit(-1);
+        }
+
 
 	}
 

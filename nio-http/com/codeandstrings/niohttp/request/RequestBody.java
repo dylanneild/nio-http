@@ -1,13 +1,33 @@
 package com.codeandstrings.niohttp.request;
 
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.util.Arrays;
 
-public class RequestBody {
+public class RequestBody implements Externalizable {
 
 	private byte[] bytes;
 
-	public byte[] getBytes() {
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        if (this.bytes == null) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(this.bytes.length);
+            out.write(this.bytes);
+        }
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        int length = in.readInt();
+
+        if (length > 0) {
+            this.bytes = new byte[length];
+            in.read(this.bytes);
+        }
+    }
+
+    public byte[] getBytes() {
 		return bytes;
 	}
 	
@@ -35,6 +55,8 @@ public class RequestBody {
 		super();
 		this.bytes = bytes;
 	}
+
+    public RequestBody() {}
 
 	@Override
 	public String toString() {

@@ -1,5 +1,6 @@
 package com.codeandstrings.niohttp.request;
 
+import java.io.*;
 import java.net.URI;
 import java.util.List;
 import java.util.Set;
@@ -8,14 +9,32 @@ import com.codeandstrings.niohttp.data.HeaderValues;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
 
-public class RequestHeader {
+public class RequestHeader implements Externalizable {
 
 	private RequestMethod method;
 	private URI uri;
 	private HttpProtocol protocol;
 	private HeaderValues headers;
 
-	public RequestMethod getMethod() {
+    public RequestHeader() {}
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeObject(this.method);
+        out.writeObject(uri);
+        out.writeObject(protocol);
+        out.writeObject(headers);
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        this.method = (RequestMethod)in.readObject();
+        this.uri = (URI)in.readObject();
+        this.protocol = (HttpProtocol)in.readObject();
+        this.headers = (HeaderValues)in.readObject();
+    }
+
+    public RequestMethod getMethod() {
 		return method;
 	}
 

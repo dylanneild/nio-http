@@ -19,12 +19,10 @@ public class Response {
 	private HeaderValues headers;
 	private ByteBuffer body;
 
-	public Response(HttpProtocol protocol, RequestMethod method,
-			Parameters parameters) {
+	public Response(HttpProtocol protocol, RequestMethod method) {
 		this.protocol = protocol;
 		this.method = method;
-		this.headers = new HeaderValues();
-		this.headers.addHeader("Server", parameters.getServerString());
+		this.headers = new HeaderValues(true);
 	}
 
 	public void addHeader(String name, String value) {
@@ -89,11 +87,6 @@ public class Response {
 
 	public ByteBuffer getByteBuffer() {
 
-		// this needs overhauling - right now we're just reading a simple
-		// header but as data gets larger and includes streams
-		// we'll need to make this more complex - indicate to the channel
-		// that we're here and working, etc.
-
 		ByteBuffer buffer = ByteBuffer.allocate(IdealBlockSize.VALUE);
 
 		if (this.protocol == HttpProtocol.HTTP1_1) {
@@ -112,9 +105,8 @@ public class Response {
 			byte bytes[] = null;
 
 			try {
-				bytes = s.getBytes("US-ASCII");
+				bytes = s.getBytes("ISO-8859-1");
 			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 				return null;
 			}
@@ -123,7 +115,7 @@ public class Response {
 
 		}
 
-		// should we be sending an answer?
+		// should we be sending a body?
 		boolean responseBodyNeeded = true;
 
 		if (this.method == RequestMethod.HEAD) {
