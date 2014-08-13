@@ -286,7 +286,9 @@ public class Session {
         ByteBuffer bufferToWrite = nextContainer.getBuffer();
         this.channel.write(bufferToWrite);
 
-        if (!bufferToWrite.hasRemaining()) {
+        if (bufferToWrite.hasRemaining()) {
+            bufferToWrite.compact();
+        } else {
 
             this.outputQueue.remove(nextContainer);
 
@@ -301,7 +303,6 @@ public class Session {
             if (this.outputQueue.size() == 0) {
                 this.setSelectionRequest(false);
             }
-
         }
 
     }
