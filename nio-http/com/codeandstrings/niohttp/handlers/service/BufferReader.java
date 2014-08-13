@@ -1,6 +1,5 @@
 package com.codeandstrings.niohttp.handlers.service;
 
-import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.response.BufferContainer;
 import com.codeandstrings.niohttp.response.BufferContainerHeader;
 
