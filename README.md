@@ -13,7 +13,7 @@ To build the library, either checout into Eclipse and package your own JAR file 
 
 The server library is designed to be very easy to integrate with your project. At the simplest level, simply create an instance of a RequestHandler class (in this case, a StringRequestHandler to return simple String answers) and pass it to the server as a request handler.
 
-	StringRequestHandler handler = new StringRequestHandler() {
+	public class MyHandler extends StringRequestHandler {
 	
 		@Override
 		public String getContentType() {
@@ -22,16 +22,25 @@ The server library is designed to be very easy to integrate with your project. A
 
 		@Override
 		public String handleRequest(Request request) {				
-			return "Thanks for connecting from " + request.getRemoteAddr();				
+			return "Thanks for connecting from " + request.getRemoteAddr() + "!";			
 		}
 			
 	};	
+	
+	public class MyServer {
 		
-	Server server = new Server();
-	server.setRequestHandler(handler);
-		
-	server.run();
-
+	    public static void main (String args[]) {		
+            try {
+                Server server = new Server();
+                server.addRequestHandler("/", MyHandler.class);                
+                server.run();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+             }
+        }
+        
+    }
 
 ### Example Server
 
