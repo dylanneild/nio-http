@@ -81,7 +81,7 @@ public abstract class StringRequestHandler extends RequestHandler {
     }
 
     @Override
-    protected String getHandlerDescription() {
+    public String getHandlerDescription() {
         return "String Request";
     }
 
