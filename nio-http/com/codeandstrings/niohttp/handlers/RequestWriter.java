@@ -1,4 +1,4 @@
-package com.codeandstrings.niohttp.handlers.service;
+package com.codeandstrings.niohttp.handlers;
 
 import com.codeandstrings.niohttp.request.Request;
 
@@ -82,6 +82,7 @@ public class RequestWriter {
                 this.currentRequestBuffer = null;
             }
         }
+
 
         return queue.size() > 0;
 

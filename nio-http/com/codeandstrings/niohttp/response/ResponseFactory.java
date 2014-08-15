@@ -19,6 +19,7 @@ public class ResponseFactory {
 			r.setDescription("OK");
 			r.addHeader("Content-Type", contentType);
 			r.addHeader("Content-Length", String.valueOf(content.length()));
+            r.addHeader("Connection", "close");
 		}		
 
 		byte bytes[] = content.getBytes();

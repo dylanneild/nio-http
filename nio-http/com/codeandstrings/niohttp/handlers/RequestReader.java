@@ -1,4 +1,4 @@
-package com.codeandstrings.niohttp.handlers.service;
+package com.codeandstrings.niohttp.handlers;
 
 import com.codeandstrings.niohttp.request.Request;
 

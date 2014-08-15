@@ -1,6 +1,6 @@
-package com.codeandstrings.niohttp.handlers;
+package com.codeandstrings.niohttp.handlers.impl;
 
-import com.codeandstrings.niohttp.handlers.service.RequestHandler;
+import com.codeandstrings.niohttp.handlers.RequestHandler;
 import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.response.BufferContainer;
 import com.codeandstrings.niohttp.response.Response;
@@ -25,7 +25,7 @@ public abstract class StringRequestHandler extends RequestHandler {
 
             Selector selector = Selector.open();
 
-            this.handlerSource.register(selector, SelectionKey.OP_READ);
+            this.getHandlerReadChannel().register(selector, SelectionKey.OP_READ);
 
             while (true) {
 
@@ -55,7 +55,7 @@ public abstract class StringRequestHandler extends RequestHandler {
                                     request.getRequestId(), response.getByteBuffer(), true, true);
 
                             this.sendBufferContainer(container);
-                            this.handlerSink.register(selector, SelectionKey.OP_WRITE);
+                            this.getHandlerWriteChannel().register(selector, SelectionKey.OP_WRITE);
                         }
 
                     } else {

@@ -120,26 +120,7 @@ public class Session {
     }
 
     public void queueBuffer(BufferContainer container) throws IOException {
-
-        boolean requestAlreadyHasPackets = false;
-
-        if (this.requestQueue.size() > 0) {
-            for (Request c : this.requestQueue) {
-                if (c.getRequestId() == container.getRequestId()) {
-                    requestAlreadyHasPackets = true;
-                    break;
-                }
-            }
-        }
-
-        if (!requestAlreadyHasPackets) {
-            // This is an actual an error condition - this request
-            // should be registered by the session at generation time.
-            return;
-        }
-
         this.outputQueue.add(container);
-
         this.setSelectionRequest(true);
     }
 
@@ -167,6 +148,10 @@ public class Session {
     private Request storeAndReturnRequest(Request request) {
         this.requestQueue.add(request);
         return request;
+    }
+
+    public void removeRequest(Request request) {
+        this.requestQueue.remove(request);
     }
 
     private Request analyzeForHeader() throws HttpException, IOException {
@@ -269,18 +254,28 @@ public class Session {
 
     public void socketWriteEvent() throws IOException, CloseConnectionException {
 
-        if (this.requestQueue.size() == 0) {
+        if (this.outputQueue.size() == 0) {
             this.setSelectionRequest(false);
             return;
         }
 
-        Request nextRequest = this.requestQueue.get(0);
+        Request nextRequest = null;
         BufferContainer nextContainer = null;
 
-        for (BufferContainer bufferContainer : this.outputQueue) {
-            if (bufferContainer.getRequestId() == nextRequest.getRequestId()) {
-                nextContainer = bufferContainer;
-                break;
+        if (this.requestQueue.size() > 0) {
+            nextRequest = this.requestQueue.get(0);
+        }
+
+        if (nextRequest == null) {
+            // the output queue has unassigned buffers
+            // these are errors and can just go in order.
+            nextContainer = this.outputQueue.get(0);
+        } else {
+            for (BufferContainer bufferContainer : this.outputQueue) {
+                if (bufferContainer.getRequestId() == nextRequest.getRequestId()) {
+                    nextContainer = bufferContainer;
+                    break;
+                }
             }
         }
 
@@ -300,7 +295,9 @@ public class Session {
             this.outputQueue.remove(nextContainer);
 
             if (nextContainer.isLastBufferForRequest()) {
-                this.requestQueue.remove(0);
+                if (nextRequest != null) {
+                    this.requestQueue.remove(0);
+                }
             }
 
             if (nextContainer.isCloseOnTransmission()) {
