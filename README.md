@@ -11,7 +11,7 @@ To build the library, either checout into Eclipse and package your own JAR file 
 	# file nio-http.jar 
 	nio-http.jar: Java archive data (JAR)
 
-The server library is designed to be very easy to integrate with your project. At the simplest level, simply create an instance of a RequestHandler class (in this case, a StringRequestHandler to return simple String answers) and pass it to the server as a request handler.
+The server library is designed to be very easy to integrate with your project. At the simplest level, simply create an instance of a RequestHandler class (in this case, a StringRequestHandler to return simple String answers):
 
 	public class MyHandler extends StringRequestHandler {
 	
@@ -26,6 +26,8 @@ The server library is designed to be very easy to integrate with your project. A
 		}
 			
 	};	
+	
+Then, pass the Class to the server library:	
 	
 	public class MyServer {
 		
