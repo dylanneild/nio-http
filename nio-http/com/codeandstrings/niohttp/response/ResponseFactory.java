@@ -10,6 +10,34 @@ import com.codeandstrings.niohttp.request.Request;
 
 public class ResponseFactory {
 
+    public static Response createResponse(String contentType, long contentSize, Request request) {
+
+        HttpProtocol protocol = request.getRequestProtocol();
+        RequestMethod requestMethod = request.getRequestMethod();
+
+        Response r = new Response(protocol, requestMethod);
+
+        if (protocol != HttpProtocol.HTTP0_9) {
+            r.setCode(200);
+            r.setDescription("OK");
+            r.addHeader("Content-Type", contentType);
+            r.addHeader("Content-Length", String.valueOf(contentSize));
+
+            if (request.isKeepAlive()) {
+                r.addHeader("Connection", "Keep-Alive");
+            } else {
+                r.addHeader("Connection", "close");
+            }
+        }
+
+        // TODO: Update the Request object so this isn't needed - if the body is null
+        // TODO: Just don't write one, rather than making us allocated a 0 byte buffer.
+        r.setBody(ByteBuffer.allocate(0));
+
+        return r;
+
+    }
+
 	public static Response createResponse(String content, String contentType,
 			Request request) {
 
