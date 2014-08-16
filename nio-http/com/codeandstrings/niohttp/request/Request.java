@@ -65,6 +65,28 @@ public class Request implements Externalizable {
 
 		return r;
 	}
+
+    public boolean isKeepAlive() {
+
+        for (String header : this.header.getHeaderNames()) {
+            if (header.equalsIgnoreCase("connection")) {
+
+                String value = this.header.getHeader(header);
+
+                if (value != null) {
+                    if (value.equalsIgnoreCase("keep-alive"))
+                        return true;
+                    else
+                        return false;
+                }
+
+                return false;
+            }
+        }
+
+        return false;
+
+    }
 		
 	private List<NameValuePair> getFormEncodedNameValuePairs(String from) {
 		
@@ -158,17 +180,17 @@ public class Request implements Externalizable {
 		
 		List<NameValuePair> list = getGetParameterNameValuePairs();
 		list.addAll(getPostParameterNameValuePairs());
-		
+
 		ArrayList<String> r = new ArrayList<String>();
-		
-		for (NameValuePair nvp : list) {			
+
+		for (NameValuePair nvp : list) {
 			if (nvp.getName().equals(name)) {
 				r.add(nvp.getValue());
-			}			
+			}
 		}
-		
+
 		return r;
-		
+
 	}
 	
 	public Set<String> getParameterNames() {

@@ -8,8 +8,8 @@ public class BufferContainer {
     private BufferContainerHeader bufferHeader;
 	private ByteBuffer buffer;
 
-    public BufferContainer(long sessionId, long requestId, ByteBuffer buffer, boolean closeOnTransmission, boolean lastBufferForRequest) {
-        this.bufferHeader = new BufferContainerHeader(sessionId, requestId, closeOnTransmission, lastBufferForRequest);
+    public BufferContainer(long sessionId, long requestId, ByteBuffer buffer, long sequenceId, boolean lastBufferForRequest) {
+        this.bufferHeader = new BufferContainerHeader(sessionId, requestId, sequenceId, lastBufferForRequest);
         this.buffer = buffer;
     }
 
@@ -47,12 +47,12 @@ public class BufferContainer {
         return bufferHeader.getRequestId();
     }
 
-    public boolean isCloseOnTransmission() {
-        return bufferHeader.isCloseOnTransmission();
+    public long getSequenceId() {
+        return bufferHeader.getSequenceId();
     }
 
-    public void setCloseOnTransmission(boolean closeOnTransmission) {
-        bufferHeader.setCloseOnTransmission(closeOnTransmission);
+    public void setSequenceId(long sequenceId) {
+        bufferHeader.setSequenceId(sequenceId);
     }
 
     public void setLastBufferForRequest(boolean lastBufferForRequest) {

@@ -1,6 +1,6 @@
-package com.codeandstrings.niohttp.handlers;
+package com.codeandstrings.niohttp.handlers.impl;
 
-import com.codeandstrings.niohttp.handlers.service.RequestHandler;
+import com.codeandstrings.niohttp.handlers.RequestHandler;
 import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.response.BufferContainer;
 import com.codeandstrings.niohttp.response.Response;
@@ -25,7 +25,7 @@ public abstract class StringRequestHandler extends RequestHandler {
 
             Selector selector = Selector.open();
 
-            this.handlerSource.register(selector, SelectionKey.OP_READ);
+            this.getHandlerReadChannel().register(selector, SelectionKey.OP_READ);
 
             while (true) {
 
@@ -48,14 +48,13 @@ public abstract class StringRequestHandler extends RequestHandler {
                         if (request != null) {
 
                             Response response = ResponseFactory.createResponse(this.handleRequest(request),
-                                    this.getContentType(), request.getRequestProtocol(),
-                                    request.getRequestMethod());
+                                    this.getContentType(), request);
 
                             BufferContainer container = new BufferContainer(request.getSessionId(),
-                                    request.getRequestId(), response.getByteBuffer(), true, true);
+                                    request.getRequestId(), response.getByteBuffer(), 0, true);
 
                             this.sendBufferContainer(container);
-                            this.handlerSink.register(selector, SelectionKey.OP_WRITE);
+                            this.getHandlerWriteChannel().register(selector, SelectionKey.OP_WRITE);
                         }
 
                     } else {
@@ -81,7 +80,7 @@ public abstract class StringRequestHandler extends RequestHandler {
     }
 
     @Override
-    protected String getHandlerDescription() {
+    public String getHandlerDescription() {
         return "String Request";
     }
 

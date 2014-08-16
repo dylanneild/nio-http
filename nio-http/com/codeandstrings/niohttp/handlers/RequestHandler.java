@@ -1,10 +1,11 @@
-package com.codeandstrings.niohttp.handlers.service;
+package com.codeandstrings.niohttp.handlers;
 
 import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.response.BufferContainer;
 
 import java.io.*;
 import java.nio.channels.Pipe;
+import java.nio.channels.SelectableChannel;
 
 public abstract class RequestHandler implements Runnable {
 
@@ -12,14 +13,16 @@ public abstract class RequestHandler implements Runnable {
     private Pipe bPipe;
 
     private Pipe.SourceChannel engineSource;
-    protected Pipe.SourceChannel handlerSource;
+    private Pipe.SourceChannel handlerSource;
     private Pipe.SinkChannel engineSink;
-    protected Pipe.SinkChannel handlerSink;
+    private Pipe.SinkChannel handlerSink;
 
     private RequestReader requestReader;
     private RequestWriter requestWriter;
     private BufferReader bufferReader;
     private BufferWriter bufferWriter;
+
+    private Thread handlerThread;
 
     public RequestHandler()  {
 
@@ -48,6 +51,12 @@ public abstract class RequestHandler implements Runnable {
             e.printStackTrace();
             System.exit(-1);
         }
+    }
+
+    public void startThread() {
+        this.handlerThread = new Thread(this);
+        this.handlerThread.setName("NIO-HTTP Handler Thread: " + this.getHandlerDescription());
+        this.handlerThread.start();
     }
 
     public Request executeRequestReadEvent() throws IOException, ClassNotFoundException {
@@ -84,12 +93,23 @@ public abstract class RequestHandler implements Runnable {
 
     @Override
     public void run() {
-        Thread.currentThread().setName("NIO-HTTP Handler Thread: " + this.getHandlerDescription());
         this.listenForRequests();
     }
 
     protected abstract void listenForRequests();
 
     protected abstract String getHandlerDescription();
+
+    protected SelectableChannel getHandlerReadChannel() {
+        return this.handlerSource;
+    }
+
+    protected SelectableChannel getHandlerWriteChannel() {
+        return this.handlerSink;
+    }
+
+    public int getConcurrency() {
+        return 1;
+    }
 
 }

@@ -1,5 +1,7 @@
 package com.codeandstrings.niohttp.exceptions.http;
 
+import com.codeandstrings.niohttp.request.Request;
+
 public class MethodNotAllowedException extends HttpException {
 
 	private String method;

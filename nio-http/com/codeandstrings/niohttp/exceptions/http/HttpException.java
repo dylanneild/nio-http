@@ -1,15 +1,17 @@
 package com.codeandstrings.niohttp.exceptions.http;
 
+import com.codeandstrings.niohttp.request.Request;
+
 public abstract class HttpException extends Exception {
 
 	private static final long serialVersionUID = 6003211652655022577L;
 	private int code;
 	private String description;
 
-	public HttpException(int code, String description) {
-		this.code = code;
-		this.description = description;
-	}
+    public HttpException(int code, String description) {
+        this.code = code;
+        this.description = description;
+    }
 
 	public int getCode() {
 		return code;
