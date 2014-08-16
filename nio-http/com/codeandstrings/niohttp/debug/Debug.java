@@ -9,7 +9,10 @@ public class Debug {
 		Server server = new Server();
 
         try {
-            server.addRequestHandler("/", DebugRootHandler.class);
+
+            server.addRequestHandler("/version", DebugVersionHandler.class);
+            server.addRequestHandler(".*", DebugRootHandler.class);
+
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(-1);

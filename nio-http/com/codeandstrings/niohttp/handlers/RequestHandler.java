@@ -26,8 +26,6 @@ public abstract class RequestHandler implements Runnable {
 
     public RequestHandler()  {
 
-        System.out.println("Constructing new handler: " + this.toString());
-
         try {
             this.aPipe = Pipe.open();
             this.bPipe = Pipe.open();

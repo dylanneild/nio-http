@@ -28,4 +28,8 @@ public class RequestHandlerMount {
     public void setNext(boolean next) {
         this.next = next;
     }
+
+    public String getMountPoint() {
+        return mountPoint;
+    }
 }

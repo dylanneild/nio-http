@@ -33,7 +33,9 @@ public class DebugRootHandler extends StringRequestHandler {
 
         r.append("<h1>NIO-HTTP Debug Page - " + this.hits + "</h1>\n");
 
-        r.append("<p>" + this.toString() + "</p>");
+        r.append("<p><b>Serving instance: </b>" + this.toString() + "<br>");
+        r.append("<b>Version Info: </b><a href=\"/version\">Click Here</a>");
+        r.append("</p>");
 
         r.append("<hr>\n");
 

@@ -24,12 +24,12 @@ public class Server implements Runnable {
 	private InetSocketAddress socketAddress;
 	private ServerSocketChannel serverSocketChannel;
     private HashMap<Long,Session> sessions;
-    private RequestHandlerBroker handlerBroker;
+    private RequestHandlerBroker requestHandlerBroker;
 
 	public Server() {
 		this.parameters = Parameters.getDefaultParameters();
         this.sessions = new HashMap<Long,Session>();
-        this.handlerBroker = new RequestHandlerBroker();
+        this.requestHandlerBroker = new RequestHandlerBroker();
         Thread.currentThread().setName("NIO-HTTP Selection Thread");
 	}
 
@@ -46,7 +46,7 @@ public class Server implements Runnable {
 	}
 
 	public void addRequestHandler(String path, Class handler) throws InvalidHandlerException {
-        this.handlerBroker.addHandler(path, handler);
+        this.requestHandlerBroker.addHandler(path, handler);
 	}
 
 	private void configureServerSocketChannel() throws IOException {
@@ -66,7 +66,7 @@ public class Server implements Runnable {
 			Selector selector = Selector.open();
 
 			this.serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-            this.handlerBroker.setSelectorReadHandler(selector);
+            this.requestHandlerBroker.setSelectorReadHandler(selector);
 
 			while (true) {
 
@@ -126,7 +126,7 @@ public class Server implements Runnable {
 
                                     session.reset();
 
-                                    RequestHandler requestHandler = this.handlerBroker.getHandlerForRequest(request);
+                                    RequestHandler requestHandler = this.requestHandlerBroker.getHandlerForRequest(request);
 
                                     if (requestHandler == null) {
                                         session.removeRequest(request);
@@ -160,7 +160,7 @@ public class Server implements Runnable {
                             RequestHandler requestHandler = (RequestHandler)key.attachment();
 
                             if (requestHandler == null) {
-                                requestHandler = this.handlerBroker.getHandlerForEngineSourceChannel((Pipe.SourceChannel)channel);
+                                requestHandler = this.requestHandlerBroker.getHandlerForEngineSourceChannel((Pipe.SourceChannel)channel);
                                 key.attach(requestHandler);
                             }
 
@@ -187,7 +187,8 @@ public class Server implements Runnable {
 
                             // TODO: I assume this channel attachment will be dead on a second request
                             // TODO: as resolving a socket to a session may not be possible once it's disassociated
-                            // TODO: with the selector.
+                            // TODO: with the selector. Right now this is somewhat moot because all connections
+                            // TODO: Die after one request (no keepalive).
 
                             try {
                                 session.socketWriteEvent();
@@ -199,14 +200,12 @@ public class Server implements Runnable {
 
                         } else if (channel instanceof Pipe.SinkChannel) {
 
-                            RequestHandler requestHandler = (RequestHandler)key.attachment();
+                            RequestHandler requestHandler = this.requestHandlerBroker.getHandlerForEngineSinkChannel((Pipe.SinkChannel) channel);
+                            key.attach(requestHandler);
 
-                            if (requestHandler == null) {
-                                requestHandler = this.handlerBroker.getHandlerForEngineSinkChannel((Pipe.SinkChannel)channel);
-                                key.attach(requestHandler);
-
-                                // TODO: This attachment never works... probably because we unregister below...
-                            }
+                            // TODO: This attachment never works... probably because we unregister below...
+                            // TODO: We need to make the pathing between the Server and the handler a little
+                            // TODO: Faster than this potentially.
 
                             if (!requestHandler.executeRequestWriteEvent()) {
                                 channel.register(selector, 0);

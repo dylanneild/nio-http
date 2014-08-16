@@ -158,17 +158,17 @@ public class Request implements Externalizable {
 		
 		List<NameValuePair> list = getGetParameterNameValuePairs();
 		list.addAll(getPostParameterNameValuePairs());
-		
+
 		ArrayList<String> r = new ArrayList<String>();
-		
-		for (NameValuePair nvp : list) {			
+
+		for (NameValuePair nvp : list) {
 			if (nvp.getName().equals(name)) {
 				r.add(nvp.getValue());
-			}			
+			}
 		}
-		
+
 		return r;
-		
+
 	}
 	
 	public Set<String> getParameterNames() {
