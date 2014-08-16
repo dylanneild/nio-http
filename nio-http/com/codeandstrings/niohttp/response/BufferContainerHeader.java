@@ -7,7 +7,7 @@ public class BufferContainerHeader implements Externalizable {
 
     private long sessionId;
     private long requestId;
-    private boolean closeOnTransmission;
+    private long sequenceId;
     private boolean lastBufferForRequest;
     private int bufferSize;
 
@@ -15,7 +15,7 @@ public class BufferContainerHeader implements Externalizable {
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         this.sessionId = in.readLong();
         this.requestId = in.readLong();
-        this.closeOnTransmission = in.readBoolean();
+        this.sequenceId = in.readLong();
         this.lastBufferForRequest = in.readBoolean();
         this.bufferSize = in.readInt();
     }
@@ -24,17 +24,17 @@ public class BufferContainerHeader implements Externalizable {
     public void writeExternal(ObjectOutput out) throws IOException {
         out.writeLong(this.sessionId);
         out.writeLong(this.requestId);
-        out.writeBoolean(this.closeOnTransmission);
+        out.writeLong(this.sequenceId);
         out.writeBoolean(this.lastBufferForRequest);
         out.writeInt(this.bufferSize);
     }
 
     public BufferContainerHeader() {}
 
-    public BufferContainerHeader(long sessionId, long requestId, boolean closeOnTransmission, boolean lastBufferForRequest) {
+    public BufferContainerHeader(long sessionId, long requestId, long sequenceId, boolean lastBufferForRequest) {
         this.sessionId = sessionId;
         this.requestId = requestId;
-        this.closeOnTransmission = closeOnTransmission;
+        this.sequenceId = sequenceId;
         this.lastBufferForRequest = lastBufferForRequest;
     }
 
@@ -83,12 +83,12 @@ public class BufferContainerHeader implements Externalizable {
         this.requestId = requestId;
     }
 
-    public boolean isCloseOnTransmission() {
-        return closeOnTransmission;
+    public long getSequenceId() {
+        return sequenceId;
     }
 
-    public void setCloseOnTransmission(boolean closeOnTransmission) {
-        this.closeOnTransmission = closeOnTransmission;
+    public void setSequenceId(long sequenceId) {
+        this.sequenceId = sequenceId;
     }
 
     public boolean isLastBufferForRequest() {
@@ -110,14 +110,14 @@ public class BufferContainerHeader implements Externalizable {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof BufferContainerHeader)) return false;
+        if (o == null || getClass() != o.getClass()) return false;
 
         BufferContainerHeader that = (BufferContainerHeader) o;
 
         if (bufferSize != that.bufferSize) return false;
-        if (closeOnTransmission != that.closeOnTransmission) return false;
         if (lastBufferForRequest != that.lastBufferForRequest) return false;
         if (requestId != that.requestId) return false;
+        if (sequenceId != that.sequenceId) return false;
         if (sessionId != that.sessionId) return false;
 
         return true;
@@ -127,7 +127,7 @@ public class BufferContainerHeader implements Externalizable {
     public int hashCode() {
         int result = (int) (sessionId ^ (sessionId >>> 32));
         result = 31 * result + (int) (requestId ^ (requestId >>> 32));
-        result = 31 * result + (closeOnTransmission ? 1 : 0);
+        result = 31 * result + (int) (sequenceId ^ (sequenceId >>> 32));
         result = 31 * result + (lastBufferForRequest ? 1 : 0);
         result = 31 * result + bufferSize;
         return result;
@@ -138,7 +138,7 @@ public class BufferContainerHeader implements Externalizable {
         return "BufferContainerHeader{" +
                 "sessionId=" + sessionId +
                 ", requestId=" + requestId +
-                ", closeOnTransmission=" + closeOnTransmission +
+                ", sequenceId=" + sequenceId +
                 ", lastBufferForRequest=" + lastBufferForRequest +
                 ", bufferSize=" + bufferSize +
                 '}';

@@ -48,11 +48,10 @@ public abstract class StringRequestHandler extends RequestHandler {
                         if (request != null) {
 
                             Response response = ResponseFactory.createResponse(this.handleRequest(request),
-                                    this.getContentType(), request.getRequestProtocol(),
-                                    request.getRequestMethod());
+                                    this.getContentType(), request);
 
                             BufferContainer container = new BufferContainer(request.getSessionId(),
-                                    request.getRequestId(), response.getByteBuffer(), true, true);
+                                    request.getRequestId(), response.getByteBuffer(), 0, true);
 
                             this.sendBufferContainer(container);
                             this.getHandlerWriteChannel().register(selector, SelectionKey.OP_WRITE);

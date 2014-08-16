@@ -144,8 +144,8 @@ public class RequestHeaderFactory {
 		
 		if (tokens.length != 3)
 			return;
-				
-		if (tokens[2].equalsIgnoreCase("http/1.0")) {
+
+        if (tokens[2].equalsIgnoreCase("http/1.0")) {
 			this.protocol = HTTP1_0;
 		} else if (tokens[2].equalsIgnoreCase("http/1.1")) {
 			this.protocol = HTTP1_1;
@@ -168,7 +168,7 @@ public class RequestHeaderFactory {
 			// just a GET /uri so should be honored right away 
 			// with minimal fuss and no keep alive.
 			//
-			this.protocol = HTTP1_0;
+			this.protocol = HTTP0_9;
 			return true;
 		} else {
 			// was the last line sent a start command (carriage return on new line)?

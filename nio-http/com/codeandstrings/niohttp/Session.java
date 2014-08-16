@@ -295,13 +295,27 @@ public class Session {
             this.outputQueue.remove(nextContainer);
 
             if (nextContainer.isLastBufferForRequest()) {
-                if (nextRequest != null) {
-                    this.requestQueue.remove(0);
-                }
-            }
 
-            if (nextContainer.isCloseOnTransmission()) {
-                throw new CloseConnectionException();
+                // we're done with this response
+
+                if (nextRequest == null || !nextRequest.isKeepAlive()) {
+
+                    // shut it down - remove the request and fire a CloseConnectionException
+                    if (nextRequest != null) {
+                        this.requestQueue.remove(0);
+                    }
+
+                    throw new CloseConnectionException();
+
+                }
+                else {
+                    // eventually we want to be able to support chunked
+                    // for now, we simply send the response
+                    if (nextRequest != null) {
+                        this.requestQueue.remove(0);
+                    }
+                }
+
             }
 
             if (this.outputQueue.size() == 0) {

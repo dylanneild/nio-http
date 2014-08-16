@@ -1,5 +1,5 @@
 package com.codeandstrings.niohttp.enums;
 
 public enum HttpProtocol {
-	HTTP1_0, HTTP1_1;
+	HTTP0_9, HTTP1_0, HTTP1_1;
 }

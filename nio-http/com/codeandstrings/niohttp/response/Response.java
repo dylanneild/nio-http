@@ -89,7 +89,7 @@ public class Response {
 
 		ByteBuffer buffer = ByteBuffer.allocate(IdealBlockSize.VALUE);
 
-		if (this.protocol == HttpProtocol.HTTP1_1) {
+		if (this.protocol != HttpProtocol.HTTP0_9) {
 
 			StringBuilder r = new StringBuilder();
 
