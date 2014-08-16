@@ -68,23 +68,14 @@ public class Request implements Externalizable {
 
     public boolean isKeepAlive() {
 
-        for (String header : this.header.getHeaderNames()) {
-            if (header.equalsIgnoreCase("connection")) {
+        String connection = this.header.getCaseInsensitiveHeaderName("connection");
 
-                String value = this.header.getHeader(header);
-
-                if (value != null) {
-                    if (value.equalsIgnoreCase("keep-alive"))
-                        return true;
-                    else
-                        return false;
-                }
-
-                return false;
-            }
-        }
-
-        return false;
+        if (connection == null)
+            return false;
+        else if (connection.equalsIgnoreCase("keep-alive"))
+            return true;
+        else
+            return false;
 
     }
 		

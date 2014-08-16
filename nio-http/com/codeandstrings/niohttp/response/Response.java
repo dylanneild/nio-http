@@ -24,6 +24,9 @@ public class Response {
 		this.method = method;
 		this.headers = new HeaderValues(true);
 	}
+     public void removeHeader(String name) {
+        headers.removeHeader(name);
+    }
 
 	public void addHeader(String name, String value) {
 		headers.addHeader(name, value);
