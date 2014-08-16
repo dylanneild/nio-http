@@ -13,6 +13,13 @@ public abstract class HttpException extends Exception {
         this.description = description;
     }
 
+    public HttpException(int code, String description, Exception e) {
+        super(e);
+        this.code = code;
+        this.description = description;
+        e.printStackTrace();
+    }
+
 	public int getCode() {
 		return code;
 	}
