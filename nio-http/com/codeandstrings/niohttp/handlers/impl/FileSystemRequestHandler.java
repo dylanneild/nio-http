@@ -98,7 +98,8 @@ class FileSystemRequestHandler$Task {
         }
 
         // TODO: This is a 64k buffer - at 8k, the system is almost 1/4 as fast.
-        // TODO: This is a highly tunable value!
+        // TODO: Ergo, this is a highly tunable value!
+
         this.readBuffer = ByteBuffer.allocate(IdealBlockSize.VALUE * 8);
         this.future = this.fileChannel.read(this.readBuffer, position);
     }
@@ -160,11 +161,11 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
         return "File System Handler";
     }
 
-    private void scheduleWrites(Selector selector) throws ClosedChannelException {
+    protected void scheduleWrites(Selector selector) throws ClosedChannelException {
         this.getHandlerWriteChannel().register(selector, SelectionKey.OP_WRITE);
     }
 
-    private void sendException(HttpException e, Request request, Selector selector) throws ClosedChannelException {
+    protected void sendException(HttpException e, Request request, Selector selector) throws ClosedChannelException {
 
         ExceptionResponseFactory responseFactory = new ExceptionResponseFactory(e);
         Response response = responseFactory.create(null);
@@ -175,12 +176,12 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
 
     }
 
-    private void serviceDirectoryRequest(Path path, Request request, Selector selector) throws ClosedChannelException {
+    protected void serviceDirectoryRequest(Path path, Request request, Selector selector) throws ClosedChannelException {
         System.out.println("Directory service not implemented.");
         this.sendException(new ForbiddenException(), request, selector);
     }
 
-    private void serviceFileRequest(Path path, Request request, Selector selector) throws ClosedChannelException {
+    private final void serviceFileRequest(Path path, Request request, Selector selector) throws ClosedChannelException {
 
         // we handle directories differently
         if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
@@ -218,7 +219,7 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
     }
 
     @Override
-    protected void listenForRequests() {
+    protected final void listenForRequests() {
 
         try {
 
