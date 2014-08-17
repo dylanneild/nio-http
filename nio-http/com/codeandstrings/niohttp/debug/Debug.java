@@ -1,6 +1,7 @@
 package com.codeandstrings.niohttp.debug;
 
 import com.codeandstrings.niohttp.Server;
+import com.codeandstrings.niohttp.handlers.impl.StreamingFileSystemHandler;
 
 public class Debug {
 
@@ -9,7 +10,7 @@ public class Debug {
 		Server server = new Server();
 
         try {
-
+            server.addRequestHandler("/pictures/.*", DebugPictureHandler.class);
             server.addRequestHandler("/version", DebugVersionHandler.class);
             server.addRequestHandler(".*", DebugRootHandler.class);
 
