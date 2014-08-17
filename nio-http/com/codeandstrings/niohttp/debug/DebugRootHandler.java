@@ -19,8 +19,6 @@ public class DebugRootHandler extends StringRequestHandler {
     @Override
     public String handleRequest(Request request) {
 
-        // System.out.println("Handling: " + this.toString() + " " + Thread.currentThread().toString());
-
         hits++;
 
         StringBuilder r = new StringBuilder();

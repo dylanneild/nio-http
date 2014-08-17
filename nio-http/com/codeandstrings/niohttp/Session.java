@@ -289,7 +289,10 @@ public class Session {
         this.channel.write(bufferToWrite);
 
         if (bufferToWrite.hasRemaining()) {
+
             bufferToWrite.compact();
+            bufferToWrite.flip();
+
         } else {
 
             this.outputQueue.remove(nextContainer);

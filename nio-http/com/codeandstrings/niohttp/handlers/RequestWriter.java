@@ -68,7 +68,12 @@ public class RequestWriter {
         if (this.currentSizeBuffer != null) {
             this.channel.write(this.currentSizeBuffer);
             if (this.currentSizeBuffer.hasRemaining()) {
+
+                this.currentSizeBuffer.compact();
+                this.currentSizeBuffer.flip();
+
                 return true;
+
             } else {
                 this.currentSizeBuffer = null;
             }
@@ -77,7 +82,12 @@ public class RequestWriter {
         if (this.currentRequestBuffer != null) {
             this.channel.write(this.currentRequestBuffer);
             if (this.currentRequestBuffer.hasRemaining()) {
+
+                this.currentRequestBuffer.compact();
+                this.currentRequestBuffer.flip();
+
                 return true;
+
             } else {
                 this.currentRequestBuffer = null;
             }
