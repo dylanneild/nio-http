@@ -1,7 +1,6 @@
 package com.codeandstrings.niohttp.debug;
 
 import com.codeandstrings.niohttp.Server;
-import com.codeandstrings.niohttp.handlers.impl.StreamingFileSystemHandler;
 
 public class Debug {
 
