@@ -1,7 +1,5 @@
 package com.codeandstrings.niohttp.data;
 
-import com.sun.org.glassfish.gmbal.NameValue;
-
 import java.io.*;
 import java.util.*;
 
