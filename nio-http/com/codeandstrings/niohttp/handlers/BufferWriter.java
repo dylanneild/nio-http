@@ -64,12 +64,7 @@ public class BufferWriter {
         if (this.currentSizeBuffer != null) {
             this.channel.write(this.currentSizeBuffer);
             if (this.currentSizeBuffer.hasRemaining()) {
-
-                this.currentSizeBuffer.compact();
-                this.currentSizeBuffer.flip();
-
                 return true;
-
             } else {
                 this.currentSizeBuffer = null;
             }
@@ -78,12 +73,7 @@ public class BufferWriter {
         if (this.currentHeaderBuffer != null) {
             this.channel.write(this.currentHeaderBuffer);
             if (this.currentHeaderBuffer.hasRemaining()) {
-
-                this.currentHeaderBuffer.compact();
-                this.currentHeaderBuffer.flip();
-
                 return true;
-
             } else {
                 this.currentHeaderBuffer = null;
             }
@@ -92,12 +82,7 @@ public class BufferWriter {
         if (this.currentDataBuffer != null) {
             this.channel.write(this.currentDataBuffer);
             if (this.currentDataBuffer.hasRemaining()) {
-
-                this.currentDataBuffer.compact();
-                this.currentDataBuffer.flip();
-
                 return true;
-
             } else {
                 this.currentDataBuffer = null;
             }
