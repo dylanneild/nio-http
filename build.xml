@@ -25,7 +25,13 @@
 	</target>
 
 	<target name="all">
+
 		<mkdir dir="${basedir}/dist"/>
+
+		<copy todir="${basedir}/dist/com/codeandstrings/niohttp/data/mime">			  			  
+			<fileset dir="${basedir}/nio-http/com/codeandstrings/niohttp/data/mime" includes="mime.types"/>
+		</copy>
+
 		<javac srcdir="${basedir}"
 			   destdir="${basedir}/dist"
 			   optimize="true"
