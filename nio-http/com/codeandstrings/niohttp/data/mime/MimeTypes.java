@@ -10,56 +10,34 @@ public class MimeTypes {
         MimeTypes r = new MimeTypes();
         r.map = new HashMap<String, String>();
 
-        InputStream fis = null;
-        InputStreamReader isr = null;
-        BufferedReader br = null;
-
         try {
-            fis = MimeTypes.class.getResourceAsStream("mime.types");
-            isr = new InputStreamReader(fis);
-            br = new BufferedReader(isr);
+            try (InputStream fis = MimeTypes.class.getResourceAsStream("mime.types");
+                 InputStreamReader isr = new InputStreamReader(fis);
+                 BufferedReader br = new BufferedReader(isr)) {
 
-            while (true) {
+                while (true) {
 
-                String line = br.readLine();
+                    String line = br.readLine();
 
-                if (line == null)
-                    return r;
+                    if (line == null)
+                        return r;
 
-                line = line.trim();
+                    line = line.trim();
 
-                if (!line.startsWith("#")) {
-                    r.digest(line);
+                    if (!line.startsWith("#")) {
+                        r.digest(line);
+                    }
+
                 }
-
             }
-
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
-        }
-        finally {
-            if (br != null) {
-                try {
-                    br.close();
-                } catch (Exception e) {}
-            }
-            if (isr != null) {
-                try {
-                    isr.close();
-                } catch (Exception e) {}
-            }
-            if (fis != null) {
-                try {
-                    fis.close();
-                } catch (Exception e) {}
-            }
         }
 
     }
 
-    private HashMap<String,String> map;
+    private HashMap<String, String> map;
 
     private void digest(String line) {
 
@@ -96,7 +74,7 @@ public class MimeTypes {
 
     public String getMimeTypeForExtension(String extension) {
 
-        if (extension==null)
+        if (extension == null)
             return null;
 
         return this.map.get(extension.toLowerCase());
