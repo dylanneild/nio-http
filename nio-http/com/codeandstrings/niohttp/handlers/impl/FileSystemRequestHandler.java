@@ -298,8 +298,19 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
         }
 
         if (modifiedSince != null) {
-            System.err.println("If-Modified-Since sent but not yet implemented.");
-            return false;
+
+            Date dateObject = DateUtils.parseRfc822DateString(modifiedSince);
+
+            if (dateObject == null) {
+                return false;
+            }
+
+            if (task.getLastModified().getTime() > dateObject.getTime()) {
+                return false;
+            } else {
+                return true;
+            }
+
         }
 
         return false;
