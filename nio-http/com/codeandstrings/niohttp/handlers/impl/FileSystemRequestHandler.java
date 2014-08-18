@@ -15,6 +15,7 @@ import com.codeandstrings.niohttp.response.Response;
 import com.codeandstrings.niohttp.response.ResponseFactory;
 
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
@@ -148,10 +149,18 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
 
     private Path getRatifiedFilePath(String requestUri) throws BadRequestException, ForbiddenException, NotFoundException {
 
-        if (!requestUri.startsWith(this.getUriPrefix()))
+        String decoded = null;
+
+        try {
+            decoded = URLDecoder.decode(requestUri, "UTF-8");
+        } catch (Exception e) {
+            throw new BadRequestException();
+        }
+
+        if (!decoded.startsWith(this.getUriPrefix()))
             throw new BadRequestException();
 
-        String prefixRemoved = requestUri.substring(this.getUriPrefix().length());
+        String prefixRemoved = decoded.substring(this.getUriPrefix().length());
 
         // TODO: The notion of which files should be considered index files
         // TODO: Needs to be implemented.
