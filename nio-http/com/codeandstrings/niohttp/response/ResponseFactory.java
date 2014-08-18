@@ -1,7 +1,9 @@
 package com.codeandstrings.niohttp.response;
 
 import java.nio.ByteBuffer;
+import java.util.Date;
 
+import com.codeandstrings.niohttp.data.DateUtils;
 import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
@@ -10,7 +12,7 @@ import com.codeandstrings.niohttp.request.Request;
 
 public class ResponseFactory {
 
-    public static Response createResponse(String contentType, long contentSize, Request request) {
+    private static Response getBasicResponse(Request request) {
 
         HttpProtocol protocol = request.getRequestProtocol();
         RequestMethod requestMethod = request.getRequestMethod();
@@ -20,14 +22,29 @@ public class ResponseFactory {
         if (protocol != HttpProtocol.HTTP0_9) {
             r.setCode(200);
             r.setDescription("OK");
-            r.addHeader("Content-Type", contentType);
-            r.addHeader("Content-Length", String.valueOf(contentSize));
+            r.addHeader("Date", DateUtils.getRfc822DateString(new Date()));
 
             if (request.isKeepAlive()) {
                 r.addHeader("Connection", "Keep-Alive");
             } else {
                 r.addHeader("Connection", "close");
             }
+        }
+
+        return r;
+
+    }
+
+    public static Response createResponse(String contentType, long contentSize, Request request) {
+
+        HttpProtocol protocol = request.getRequestProtocol();
+        Response r = getBasicResponse(request);
+
+        if (protocol != HttpProtocol.HTTP0_9) {
+            r.setCode(200);
+            r.setDescription("OK");
+            r.addHeader("Content-Type", contentType);
+            r.addHeader("Content-Length", String.valueOf(contentSize));
         }
 
         // TODO: Update the Request object so this isn't needed - if the body is null
@@ -41,23 +58,7 @@ public class ResponseFactory {
 	public static Response createResponse(String content, String contentType,
 			Request request) {
 
-        HttpProtocol protocol = request.getRequestProtocol();
-        RequestMethod requestMethod = request.getRequestMethod();
-
-		Response r = new Response(protocol, requestMethod);
-
-		if (protocol != HttpProtocol.HTTP0_9) {
-            r.setCode(200);
-			r.setDescription("OK");
-			r.addHeader("Content-Type", contentType);
-			r.addHeader("Content-Length", String.valueOf(content.length()));
-
-            if (request.isKeepAlive()) {
-                r.addHeader("Connection", "Keep-Alive");
-            } else {
-                r.addHeader("Connection", "close");
-            }
-        }
+        Response r = createResponse(contentType, content.length(), request);
 
         byte bytes[] = content.getBytes();
 		ByteBuffer contentBuffer = ByteBuffer.allocate(bytes.length);
