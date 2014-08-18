@@ -68,7 +68,7 @@ public class Request implements Externalizable {
 
     public boolean isKeepAlive() {
 
-        String connection = this.header.getCaseInsensitiveHeaderName("connection");
+        String connection = this.header.getHeaderCaseInsensitive("connection");
 
         if (connection == null)
             return false;
@@ -231,7 +231,11 @@ public class Request implements Externalizable {
 		return header.getHeader(name);
 	}
 
-	public List<String> getHeaders(String name) {
+    public String getHeaderCaseInsensitive(String name) {
+        return header.getHeaderCaseInsensitive(name);
+    }
+
+    public List<String> getHeaders(String name) {
 		return header.getHeaders(name);
 	}
 
@@ -240,7 +244,7 @@ public class Request implements Externalizable {
 	}
 	
 	public String getContentType() {
-		return getHeader("Content-Type");
+		return getHeaderCaseInsensitive("Content-Type");
 	}
 
     public long getRequestId() {

@@ -1,6 +1,8 @@
 package com.codeandstrings.niohttp.handlers.impl;
 
+import com.codeandstrings.niohttp.data.DateUtils;
 import com.codeandstrings.niohttp.data.DirectoryMembers;
+import com.codeandstrings.niohttp.data.FileUtils;
 import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.data.mime.MimeTypes;
 import com.codeandstrings.niohttp.enums.RequestMethod;
@@ -18,6 +20,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.file.*;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -31,6 +34,8 @@ class FileSystemRequestHandler$FileTask {
     private int position;
     private long fileSize;
     private String mimeType;
+    private Date lastModified;
+    private String etag;
     private long requestId;
     private long sessionId;
     private long nextSequence;
@@ -43,12 +48,22 @@ class FileSystemRequestHandler$FileTask {
         this.requestId = request.getRequestId();
         this.sessionId = request.getSessionId();
         this.nextSequence = 0;
+        this.lastModified = new Date(Files.getLastModifiedTime(path, LinkOption.NOFOLLOW_LINKS).toMillis());
+        this.etag = FileUtils.computeEtag(path.getFileName().toString(), this.lastModified);
     }
 
     public void close() {
         try {
             this.fileChannel.close();
         } catch (Exception e) {}
+    }
+
+    public Date getLastModified() {
+        return lastModified;
+    }
+
+    public String getEtag() {
+        return etag;
     }
 
     public long getRequestId() {
@@ -254,6 +269,34 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
 
     }
 
+    private static void addFileInformationToRequest(FileSystemRequestHandler$FileTask task, Response r) throws IOException {
+
+        r.addHeader("Last-Modified", DateUtils.getRfc822DateStringGMT(task.getLastModified()));
+
+        if (task.getEtag() != null) {
+            r.addHeader("ETag", task.getEtag());
+        }
+
+    }
+
+    private static boolean shouldSendNotModified(Request r, FileSystemRequestHandler$FileTask task) {
+
+        String modifiedSince = r.getHeaderCaseInsensitive("If-Modified-Since");
+        String etagMatch = r.getHeaderCaseInsensitive("If-None-Match");
+
+        if (etagMatch != null && task.getEtag() != null && etagMatch.equals(task.getEtag())) {
+            return true;
+        }
+
+        if (modifiedSince != null) {
+            System.err.println("If-Modified-Since sent but not yet implemented.");
+            return false;
+        }
+
+        return false;
+
+    }
+
     private final void serviceFileRequest(Path path, Request request, Selector selector) throws IOException {
 
         // we handle directories differently
@@ -263,30 +306,39 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
         }
 
         // allocate a task and start the reading process
-        FileSystemRequestHandler$FileTask task = null;
+        FileSystemRequestHandler$FileTask task = new FileSystemRequestHandler$FileTask(path, this.mimeTypes.getMimeTypeForFilename(path.toString()), request);
+        boolean skipBody = request.getRequestMethod() == RequestMethod.HEAD;
+        boolean notModified = shouldSendNotModified(request, task);
 
-        try {
-            task = new FileSystemRequestHandler$FileTask(path, this.mimeTypes.getMimeTypeForFilename(path.toString()), request);
-            task.readNextBuffer();
-        } catch (Exception e) {
-            this.sendException(new InternalServerErrorException(e), request, selector);
+        Response r = null;
+
+        if (notModified) {
+            // this task is not modified
+            r = ResponseFactory.createResponseNotModified(request, task.getLastModified(), task.getEtag());
+        } else {
+            // we now have a task and it's readying data;
+            r = ResponseFactory.createResponse(task.getMimeType(), task.getFileSize(), request);
+            FileSystemRequestHandler.addFileInformationToRequest(task, r);
         }
 
-        boolean skipBody = request.getRequestMethod() == RequestMethod.HEAD;
-
-        // we now have a task and it's readying data;
-        Response r = ResponseFactory.createResponse(task.getMimeType(), task.getFileSize(), request);
         BufferContainer responseHeader = new BufferContainer(request.getSessionId(), request.getRequestId(), r.getByteBuffer(), 0, skipBody);
         this.sendBufferContainer(responseHeader);
 
         // if this is a HEAD request, don't bother sending back content
         // otherwise, schedule this new task for later
-        if (skipBody) {
+        if (skipBody || notModified) {
             task.close();
         } else {
-            this.tasks.add(task);
+            try {
+                task.readNextBuffer();
+                this.tasks.add(task);
+            } catch (Exception e) {
+                task.close();
+                this.sendException(new InternalServerErrorException(e), request, selector);
+            }
         }
 
+        // schedule writes, no matter what (we're either sending a response or an exception)
         this.scheduleWrites(selector);
 
     }
