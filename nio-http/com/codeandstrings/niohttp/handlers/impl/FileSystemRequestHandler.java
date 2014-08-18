@@ -1,5 +1,6 @@
 package com.codeandstrings.niohttp.handlers.impl;
 
+import com.codeandstrings.niohttp.data.DirectoryMembers;
 import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.data.mime.MimeTypes;
 import com.codeandstrings.niohttp.enums.RequestMethod;
@@ -12,11 +13,14 @@ import com.codeandstrings.niohttp.response.Response;
 import com.codeandstrings.niohttp.response.ResponseFactory;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -98,7 +102,9 @@ class FileSystemRequestHandler$Task {
         }
 
         // TODO: This is a 64k buffer - at 8k, the system is almost 1/4 as fast.
-        // TODO: Ergo, this is a highly tunable value!
+        // TODO: Ergo, this is a highly tunable value. Perhaps integrating this
+        // TODO: Into the parameters system somehow down the line might be of
+        // TODO: value.
 
         this.readBuffer = ByteBuffer.allocate(IdealBlockSize.VALUE * 8);
         this.future = this.fileChannel.read(this.readBuffer, position);
@@ -178,12 +184,78 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
 
     }
 
-    protected void serviceDirectoryRequest(Path path, Request request, Selector selector) throws ClosedChannelException {
-        System.out.println("Directory service not implemented.");
-        this.sendException(new ForbiddenException(), request, selector);
+    protected String directoryRequest(Request request, List<DirectoryMembers> members)  {
+
+        StringBuilder r = new StringBuilder();
+        String path = request.getRequestURI().getPath();
+
+        r.append("<html>");
+        r.append("<head>");
+        r.append("<title>");
+        r.append(path);
+        r.append("</title>");
+        r.append("</head>");
+        r.append("<body>");
+        r.append("<p>");
+
+        for (DirectoryMembers directoryMember : members) {
+
+            if (directoryMember.isHidden()) {
+                continue;
+            }
+
+            r.append("<div>");
+            r.append("<a href=\"");
+            r.append(path);
+
+            if (!path.endsWith("/")) {
+                r.append("/");
+            }
+
+            try {
+                r.append(URLEncoder.encode(directoryMember.getName(), "UTF-8"));
+            }
+            catch (Exception e) {
+                r.append(directoryMember.getName());
+            }
+
+            r.append("\">");
+            r.append(directoryMember.getName());
+            r.append("</a>");
+            r.append("</div>");
+        }
+
+        r.append("</p><p><pre>Directory index served by NIO-HTTP v1.0</pre></p>");
+
+        r.append("</body>");
+        r.append("</html>");
+
+        return r.toString();
+
     }
 
-    private final void serviceFileRequest(Path path, Request request, Selector selector) throws ClosedChannelException {
+    private void serviceDirectoryRequest(Path path, Request request, Selector selector) throws IOException {
+
+        List<DirectoryMembers> files = new ArrayList<DirectoryMembers>();
+
+        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(path)) {
+            for (Path filePath : directoryStream) {
+                files.add(new DirectoryMembers(filePath, this.mimeTypes.getMimeTypeForFilename(filePath.getFileName().toString())));
+            }
+        } catch (Exception e) {
+            this.sendException(new InternalServerErrorException(e), request, selector);
+        }
+
+        String html = this.directoryRequest(request, files);
+
+        Response response = ResponseFactory.createResponse(html, "text/html", request);
+        BufferContainer responseHeader = new BufferContainer(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), 0, true);
+        this.sendBufferContainer(responseHeader);
+        this.scheduleWrites(selector);
+
+    }
+
+    private final void serviceFileRequest(Path path, Request request, Selector selector) throws IOException {
 
         // we handle directories differently
         if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
