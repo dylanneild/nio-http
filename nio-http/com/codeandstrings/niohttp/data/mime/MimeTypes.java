@@ -76,7 +76,13 @@ public class MimeTypes {
         if (extension == null)
             return null;
 
-        return this.map.get(extension.toLowerCase());
+        String r = this.map.get(extension.toLowerCase());
+
+        if (r == null) {
+            return "application/octet-stream";
+        } else {
+            return r;
+        }
 
     }
 
