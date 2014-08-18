@@ -7,6 +7,7 @@ public class HeaderValues implements Externalizable {
 
 	private ArrayList<NameValuePair> headers;
 
+    @SuppressWarnings("unchecked")
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         this.headers = (ArrayList<NameValuePair>)in.readObject();

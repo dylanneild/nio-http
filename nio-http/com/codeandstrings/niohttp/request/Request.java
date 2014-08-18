@@ -109,7 +109,8 @@ public class Request implements Externalizable {
 		
 	}
 	
-	private List<NameValuePair> getGetParameterNameValuePairs() {
+	@SuppressWarnings("unchecked")
+    private List<NameValuePair> getGetParameterNameValuePairs() {
 		
 		URI uri = this.getRequestURI();
 		String query = uri.getQuery();
