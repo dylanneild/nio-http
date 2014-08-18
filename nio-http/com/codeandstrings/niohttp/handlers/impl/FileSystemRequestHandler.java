@@ -1,5 +1,8 @@
 package com.codeandstrings.niohttp.handlers.impl;
 
+import com.codeandstrings.niohttp.data.DateUtils;
+import com.codeandstrings.niohttp.data.DirectoryMembers;
+import com.codeandstrings.niohttp.data.FileUtils;
 import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.data.mime.MimeTypes;
 import com.codeandstrings.niohttp.enums.RequestMethod;
@@ -12,15 +15,19 @@ import com.codeandstrings.niohttp.response.Response;
 import com.codeandstrings.niohttp.response.ResponseFactory;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.file.*;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-class FileSystemRequestHandler$Task {
+class FileSystemRequestHandler$FileTask {
 
     private AsynchronousFileChannel fileChannel;
     private Future<Integer> future;
@@ -28,11 +35,13 @@ class FileSystemRequestHandler$Task {
     private int position;
     private long fileSize;
     private String mimeType;
+    private Date lastModified;
+    private String etag;
     private long requestId;
     private long sessionId;
     private long nextSequence;
 
-    public FileSystemRequestHandler$Task(Path path, String mimeType, Request request) throws IOException {
+    public FileSystemRequestHandler$FileTask(Path path, String mimeType, Request request) throws IOException {
         this.fileChannel = AsynchronousFileChannel.open(path, StandardOpenOption.READ);
         this.fileSize = Files.size(path);
         this.position = 0;
@@ -40,12 +49,22 @@ class FileSystemRequestHandler$Task {
         this.requestId = request.getRequestId();
         this.sessionId = request.getSessionId();
         this.nextSequence = 0;
+        this.lastModified = new Date(Files.getLastModifiedTime(path, LinkOption.NOFOLLOW_LINKS).toMillis());
+        this.etag = FileUtils.computeEtag(path.getFileName().toString(), this.lastModified);
     }
 
     public void close() {
         try {
             this.fileChannel.close();
         } catch (Exception e) {}
+    }
+
+    public Date getLastModified() {
+        return lastModified;
+    }
+
+    public String getEtag() {
+        return etag;
     }
 
     public long getRequestId() {
@@ -98,7 +117,9 @@ class FileSystemRequestHandler$Task {
         }
 
         // TODO: This is a 64k buffer - at 8k, the system is almost 1/4 as fast.
-        // TODO: Ergo, this is a highly tunable value!
+        // TODO: Ergo, this is a highly tunable value. Perhaps integrating this
+        // TODO: Into the parameters system somehow down the line might be of
+        // TODO: value.
 
         this.readBuffer = ByteBuffer.allocate(IdealBlockSize.VALUE * 8);
         this.future = this.fileChannel.read(this.readBuffer, position);
@@ -108,7 +129,7 @@ class FileSystemRequestHandler$Task {
 
 public abstract class FileSystemRequestHandler extends RequestHandler {
 
-    private ArrayList<FileSystemRequestHandler$Task> tasks;
+    private ArrayList<FileSystemRequestHandler$FileTask> tasks;
     private FileSystem fileSystem;
     private MimeTypes mimeTypes;
 
@@ -116,7 +137,7 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
     public abstract String getUriPrefix();
 
     public FileSystemRequestHandler() {
-        this.tasks = new ArrayList<FileSystemRequestHandler$Task>();
+        this.tasks = new ArrayList<FileSystemRequestHandler$FileTask>();
         this.fileSystem = FileSystems.getDefault();
         this.mimeTypes = MimeTypes.getInstance();
     }
@@ -128,10 +149,18 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
 
     private Path getRatifiedFilePath(String requestUri) throws BadRequestException, ForbiddenException, NotFoundException {
 
-        if (!requestUri.startsWith(this.getUriPrefix()))
+        String decoded = null;
+
+        try {
+            decoded = URLDecoder.decode(requestUri, "UTF-8");
+        } catch (Exception e) {
+            throw new BadRequestException();
+        }
+
+        if (!decoded.startsWith(this.getUriPrefix()))
             throw new BadRequestException();
 
-        String prefixRemoved = requestUri.substring(this.getUriPrefix().length());
+        String prefixRemoved = decoded.substring(this.getUriPrefix().length());
 
         // TODO: The notion of which files should be considered index files
         // TODO: Needs to be implemented.
@@ -178,12 +207,106 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
 
     }
 
-    protected void serviceDirectoryRequest(Path path, Request request, Selector selector) throws ClosedChannelException {
-        System.out.println("Directory service not implemented.");
-        this.sendException(new ForbiddenException(), request, selector);
+    protected String directoryRequest(Request request, List<DirectoryMembers> members)  {
+
+        StringBuilder r = new StringBuilder();
+        String path = request.getRequestURI().getPath();
+
+        r.append("<html>");
+        r.append("<head>");
+        r.append("<title>");
+        r.append(path);
+        r.append("</title>");
+        r.append("</head>");
+        r.append("<body>");
+        r.append("<p>");
+
+        for (DirectoryMembers directoryMember : members) {
+
+            if (directoryMember.isHidden()) {
+                continue;
+            }
+
+            r.append("<div>");
+            r.append("<a href=\"");
+            r.append(path);
+
+            if (!path.endsWith("/")) {
+                r.append("/");
+            }
+
+            try {
+                r.append(URLEncoder.encode(directoryMember.getName(), "UTF-8"));
+            }
+            catch (Exception e) {
+                r.append(directoryMember.getName());
+            }
+
+            r.append("\">");
+            r.append(directoryMember.getName());
+            r.append("</a>");
+            r.append("</div>");
+        }
+
+        r.append("</p><p><pre>Directory index served by NIO-HTTP v1.0</pre></p>");
+
+        r.append("</body>");
+        r.append("</html>");
+
+        return r.toString();
+
     }
 
-    private final void serviceFileRequest(Path path, Request request, Selector selector) throws ClosedChannelException {
+    private void serviceDirectoryRequest(Path path, Request request, Selector selector) throws IOException {
+
+        List<DirectoryMembers> files = new ArrayList<DirectoryMembers>();
+
+        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(path)) {
+            for (Path filePath : directoryStream) {
+                files.add(new DirectoryMembers(filePath, this.mimeTypes.getMimeTypeForFilename(filePath.getFileName().toString())));
+            }
+        } catch (Exception e) {
+            this.sendException(new InternalServerErrorException(e), request, selector);
+        }
+
+        String html = this.directoryRequest(request, files);
+
+        Response response = ResponseFactory.createResponse(html, "text/html", request);
+        BufferContainer responseHeader = new BufferContainer(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), 0, true);
+        this.sendBufferContainer(responseHeader);
+        this.scheduleWrites(selector);
+
+    }
+
+    private static void addFileInformationToRequest(FileSystemRequestHandler$FileTask task, Response r) throws IOException {
+
+        r.addHeader("Last-Modified", DateUtils.getRfc822DateStringGMT(task.getLastModified()));
+
+        if (task.getEtag() != null) {
+            r.addHeader("ETag", task.getEtag());
+        }
+
+    }
+
+    private static boolean shouldSendNotModified(Request r, FileSystemRequestHandler$FileTask task) {
+
+        String modifiedSince = r.getHeaderCaseInsensitive("If-Modified-Since");
+        String etagMatch = r.getHeaderCaseInsensitive("If-None-Match");
+
+        if (etagMatch != null && task.getEtag() != null && etagMatch.equals(task.getEtag())) {
+            return true;
+        }
+
+        if (modifiedSince != null) {
+            System.err.println("If-Modified-Since sent but not yet implemented.");
+            return false;
+        }
+
+        return false;
+
+    }
+
+    private final void serviceFileRequest(Path path, Request request, Selector selector) throws IOException {
 
         // we handle directories differently
         if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
@@ -192,30 +315,39 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
         }
 
         // allocate a task and start the reading process
-        FileSystemRequestHandler$Task task = null;
+        FileSystemRequestHandler$FileTask task = new FileSystemRequestHandler$FileTask(path, this.mimeTypes.getMimeTypeForFilename(path.toString()), request);
+        boolean skipBody = request.getRequestMethod() == RequestMethod.HEAD;
+        boolean notModified = shouldSendNotModified(request, task);
 
-        try {
-            task = new FileSystemRequestHandler$Task(path, this.mimeTypes.getMimeTypeForFilename(path.toString()), request);
-            task.readNextBuffer();
-        } catch (Exception e) {
-            this.sendException(new InternalServerErrorException(e), request, selector);
+        Response r = null;
+
+        if (notModified) {
+            // this task is not modified
+            r = ResponseFactory.createResponseNotModified(request, task.getLastModified(), task.getEtag());
+        } else {
+            // we now have a task and it's readying data;
+            r = ResponseFactory.createResponse(task.getMimeType(), task.getFileSize(), request);
+            FileSystemRequestHandler.addFileInformationToRequest(task, r);
         }
 
-        boolean skipBody = request.getRequestMethod() == RequestMethod.HEAD;
-
-        // we now have a task and it's readying data;
-        Response r = ResponseFactory.createResponse(task.getMimeType(), task.getFileSize(), request);
-        BufferContainer responseHeader = new BufferContainer(request.getSessionId(), request.getRequestId(), r.getByteBuffer(), 0, skipBody);
+        BufferContainer responseHeader = new BufferContainer(request.getSessionId(), request.getRequestId(), r.getByteBuffer(), 0, (skipBody || notModified));
         this.sendBufferContainer(responseHeader);
 
         // if this is a HEAD request, don't bother sending back content
         // otherwise, schedule this new task for later
-        if (skipBody) {
+        if (skipBody || notModified) {
             task.close();
         } else {
-            this.tasks.add(task);
+            try {
+                task.readNextBuffer();
+                this.tasks.add(task);
+            } catch (Exception e) {
+                task.close();
+                this.sendException(new InternalServerErrorException(e), request, selector);
+            }
         }
 
+        // schedule writes, no matter what (we're either sending a response or an exception)
         this.scheduleWrites(selector);
 
     }
@@ -261,7 +393,7 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
 
                             // there are no further write events to execute;
                             // let's see if there are more file read events to refill the buffers
-                            FileSystemRequestHandler$Task task = this.tasks.size() > 0 ? this.tasks.remove(0) : null;
+                            FileSystemRequestHandler$FileTask task = this.tasks.size() > 0 ? this.tasks.remove(0) : null;
 
                             if (task == null) {
                                 channel.register(selector, 0);

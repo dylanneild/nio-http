@@ -83,7 +83,7 @@ public class HeaderValues implements Externalizable {
 
     }
 	
-	public String getCaseInsensitiveHeaderName(String name) {
+	public String getSingleValueCaseInsensitive(String name) {
 		
 		for (NameValuePair pair : this.headers) {
 			if (pair.getName().equalsIgnoreCase(name)) {
@@ -94,14 +94,26 @@ public class HeaderValues implements Externalizable {
 		return null;
 		
 	}
+
+    public String getSingleValue(String name) {
+
+        for (NameValuePair pair : this.headers) {
+            if (pair.getName().equals(name)) {
+                return pair.getValue();
+            }
+        }
+
+        return null;
+
+    }
 	
 	public String getRequestContentType() {		
-		return getCaseInsensitiveHeaderName("Content-Type");		
+		return getSingleValueCaseInsensitive("Content-Type");
 	}
 	
 	public int getRequestContentLength() {
 		
-		String target = getCaseInsensitiveHeaderName("Content-Length");
+		String target = getSingleValueCaseInsensitive("Content-Length");
 		
 		if (target == null)
 			return -1;

@@ -10,14 +10,9 @@ public class MimeTypes {
         MimeTypes r = new MimeTypes();
         r.map = new HashMap<String, String>();
 
-        InputStream fis = null;
-        InputStreamReader isr = null;
-        BufferedReader br = null;
-
-        try {
-            fis = MimeTypes.class.getResourceAsStream("mime.types");
-            isr = new InputStreamReader(fis);
-            br = new BufferedReader(isr);
+        try (InputStream fis = MimeTypes.class.getResourceAsStream("mime.types");
+             InputStreamReader isr = new InputStreamReader(fis);
+             BufferedReader br = new BufferedReader(isr)) {
 
             while (true) {
 
@@ -34,32 +29,14 @@ public class MimeTypes {
 
             }
 
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
-        }
-        finally {
-            if (br != null) {
-                try {
-                    br.close();
-                } catch (Exception e) {}
-            }
-            if (isr != null) {
-                try {
-                    isr.close();
-                } catch (Exception e) {}
-            }
-            if (fis != null) {
-                try {
-                    fis.close();
-                } catch (Exception e) {}
-            }
         }
 
     }
 
-    private HashMap<String,String> map;
+    private HashMap<String, String> map;
 
     private void digest(String line) {
 
@@ -96,10 +73,16 @@ public class MimeTypes {
 
     public String getMimeTypeForExtension(String extension) {
 
-        if (extension==null)
+        if (extension == null)
             return null;
 
-        return this.map.get(extension.toLowerCase());
+        String r = this.map.get(extension.toLowerCase());
+
+        if (r == null) {
+            return "application/octet-stream";
+        } else {
+            return r;
+        }
 
     }
 

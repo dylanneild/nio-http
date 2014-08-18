@@ -12,7 +12,33 @@ import com.codeandstrings.niohttp.request.Request;
 
 public class ResponseFactory {
 
-    private static Response getBasicResponse(Request request) {
+    public static Response createResponseNotModified(Request request, Date lastModified, String etag) {
+
+        HttpProtocol protocol = request.getRequestProtocol();
+        RequestMethod method = request.getRequestMethod();
+
+        if (protocol == HttpProtocol.HTTP0_9) {
+            return null;
+        }
+
+        Response r = new Response(protocol, method);
+
+        r.setCode(304);
+        r.setDescription("Not Modified");
+        r.addHeader("Date", DateUtils.getRfc822DateStringGMT(new Date()));
+        r.addHeader("Last-Modified", DateUtils.getRfc822DateStringGMT(lastModified));
+        r.addHeader("ETag", etag);
+
+        if (request.isKeepAlive()) {
+            r.addHeader("Connection", "Keep-Alive");
+        } else {
+            r.addHeader("Connection", "close");
+        }
+
+        return r;
+    }
+
+    private static Response createBasicResponse(Request request) {
 
         HttpProtocol protocol = request.getRequestProtocol();
         RequestMethod requestMethod = request.getRequestMethod();
@@ -22,7 +48,7 @@ public class ResponseFactory {
         if (protocol != HttpProtocol.HTTP0_9) {
             r.setCode(200);
             r.setDescription("OK");
-            r.addHeader("Date", DateUtils.getRfc822DateString(new Date()));
+            r.addHeader("Date", DateUtils.getRfc822DateStringGMT(new Date()));
 
             if (request.isKeepAlive()) {
                 r.addHeader("Connection", "Keep-Alive");
@@ -38,7 +64,7 @@ public class ResponseFactory {
     public static Response createResponse(String contentType, long contentSize, Request request) {
 
         HttpProtocol protocol = request.getRequestProtocol();
-        Response r = getBasicResponse(request);
+        Response r = createBasicResponse(request);
 
         if (protocol != HttpProtocol.HTTP0_9) {
             r.setCode(200);

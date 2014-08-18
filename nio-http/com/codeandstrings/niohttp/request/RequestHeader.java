@@ -42,8 +42,8 @@ public class RequestHeader implements Externalizable {
 		this.headers = headers;
 	}
 
-    public String getCaseInsensitiveHeaderName(String name) {
-        return headers.getCaseInsensitiveHeaderName(name);
+    public String getHeaderCaseInsensitive(String name) {
+        return headers.getSingleValueCaseInsensitive(name);
     }
 
     public String getHeader(String name) {
