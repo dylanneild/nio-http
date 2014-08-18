@@ -330,7 +330,7 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
             FileSystemRequestHandler.addFileInformationToRequest(task, r);
         }
 
-        BufferContainer responseHeader = new BufferContainer(request.getSessionId(), request.getRequestId(), r.getByteBuffer(), 0, skipBody);
+        BufferContainer responseHeader = new BufferContainer(request.getSessionId(), request.getRequestId(), r.getByteBuffer(), 0, (skipBody || notModified));
         this.sendBufferContainer(responseHeader);
 
         // if this is a HEAD request, don't bother sending back content
