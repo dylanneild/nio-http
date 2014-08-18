@@ -6,7 +6,12 @@ public class DebugPictureHandler extends FileSystemRequestHandler {
 
     @Override
     public String getFilePath() {
-        return "/Users/dylan/Pictures";
+
+        if (System.getProperty("os.name") != null && System.getProperty("os.name").equalsIgnoreCase("mac os x"))
+            return "/Users/dylan/Pictures";
+        else
+            return "/var/www/photos";
+
     }
 
     @Override
