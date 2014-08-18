@@ -47,10 +47,6 @@ public class ResponseFactory {
             r.addHeader("Content-Length", String.valueOf(contentSize));
         }
 
-        // TODO: Update the Request object so this isn't needed - if the body is null
-        // TODO: Just don't write one, rather than making us allocated a 0 byte buffer.
-        r.setBody(ByteBuffer.allocate(0));
-
         return r;
 
     }
