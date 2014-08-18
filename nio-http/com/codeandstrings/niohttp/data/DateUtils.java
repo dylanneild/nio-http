@@ -1,5 +1,6 @@
 package com.codeandstrings.niohttp.data;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -29,6 +30,17 @@ public class DateUtils {
         r.append(" GMT");
 
         return r.toString();
+
+    }
+
+    public static final Date parseRfc822DateString(String date) {
+
+        try {
+            return RFC_822_DATE_FORMAT.parse(date);
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return null;
+        }
 
     }
 
