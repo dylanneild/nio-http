@@ -1,7 +1,7 @@
 package com.codeandstrings.niohttp.handlers.impl;
 
-import com.codeandstrings.niohttp.data.FileUtils;
 import com.codeandstrings.niohttp.data.IdealBlockSize;
+import com.codeandstrings.niohttp.data.mime.MimeTypes;
 import com.codeandstrings.niohttp.enums.RequestMethod;
 import com.codeandstrings.niohttp.exceptions.http.*;
 import com.codeandstrings.niohttp.handlers.RequestHandler;
@@ -32,11 +32,11 @@ class FileSystemRequestHandler$Task {
     private long sessionId;
     private long nextSequence;
 
-    public FileSystemRequestHandler$Task(Path path, Request request) throws IOException {
+    public FileSystemRequestHandler$Task(Path path, String mimeType, Request request) throws IOException {
         this.fileChannel = AsynchronousFileChannel.open(path, StandardOpenOption.READ);
         this.fileSize = Files.size(path);
         this.position = 0;
-        this.mimeType = FileUtils.getMimeType(path.toString());
+        this.mimeType = mimeType;
         this.requestId = request.getRequestId();
         this.sessionId = request.getSessionId();
         this.nextSequence = 0;
@@ -110,6 +110,7 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
 
     private ArrayList<FileSystemRequestHandler$Task> tasks;
     private FileSystem fileSystem;
+    private MimeTypes mimeTypes;
 
     public abstract String getFilePath();
     public abstract String getUriPrefix();
@@ -117,6 +118,7 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
     public FileSystemRequestHandler() {
         this.tasks = new ArrayList<FileSystemRequestHandler$Task>();
         this.fileSystem = FileSystems.getDefault();
+        this.mimeTypes = MimeTypes.getInstance();
     }
 
     @Override
@@ -193,7 +195,7 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
         FileSystemRequestHandler$Task task = null;
 
         try {
-            task = new FileSystemRequestHandler$Task(path, request);
+            task = new FileSystemRequestHandler$Task(path, this.mimeTypes.getMimeTypeForFilename(path.toString()), request);
             task.readNextBuffer();
         } catch (Exception e) {
             this.sendException(new InternalServerErrorException(e), request, selector);
