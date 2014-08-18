@@ -10,26 +10,25 @@ public class MimeTypes {
         MimeTypes r = new MimeTypes();
         r.map = new HashMap<String, String>();
 
-        try {
-            try (InputStream fis = MimeTypes.class.getResourceAsStream("mime.types");
-                 InputStreamReader isr = new InputStreamReader(fis);
-                 BufferedReader br = new BufferedReader(isr)) {
+        try (InputStream fis = MimeTypes.class.getResourceAsStream("mime.types");
+             InputStreamReader isr = new InputStreamReader(fis);
+             BufferedReader br = new BufferedReader(isr)) {
 
-                while (true) {
+            while (true) {
 
-                    String line = br.readLine();
+                String line = br.readLine();
 
-                    if (line == null)
-                        return r;
+                if (line == null)
+                    return r;
 
-                    line = line.trim();
+                line = line.trim();
 
-                    if (!line.startsWith("#")) {
-                        r.digest(line);
-                    }
-
+                if (!line.startsWith("#")) {
+                    r.digest(line);
                 }
+
             }
+
         } catch (Exception e) {
             e.printStackTrace();
             return null;
