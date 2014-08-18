@@ -1,15 +1,13 @@
 package com.codeandstrings.niohttp.data;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class HeaderValues implements Externalizable {
 
 	private ArrayList<NameValuePair> headers;
 
+    @SuppressWarnings("unchecked")
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         this.headers = (ArrayList<NameValuePair>)in.readObject();
@@ -71,8 +69,21 @@ public class HeaderValues implements Externalizable {
 		return r;
 		
 	}
+
+    public void removeHeader(String name) {
+
+        Iterator<NameValuePair> itr = this.headers.iterator();
+
+        while (itr.hasNext()) {
+            NameValuePair nvp = itr.next();
+            if (nvp.getName().equalsIgnoreCase(name)) {
+                itr.remove();
+            }
+        }
+
+    }
 	
-	private String getCaseInsensitiveHeaderName(String name) {
+	public String getCaseInsensitiveHeaderName(String name) {
 		
 		for (NameValuePair pair : this.headers) {
 			if (pair.getName().equalsIgnoreCase(name)) {

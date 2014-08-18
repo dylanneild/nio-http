@@ -8,4 +8,8 @@ public class InternalServerErrorException extends HttpException {
 		super(500, "Internal Server Error");
 	}
 
+    public InternalServerErrorException(Exception e) {
+        super(500, "Internal Server Error", e);
+    }
+
 }

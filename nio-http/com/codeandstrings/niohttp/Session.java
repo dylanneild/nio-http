@@ -288,9 +288,7 @@ public class Session {
         ByteBuffer bufferToWrite = nextContainer.getBuffer();
         this.channel.write(bufferToWrite);
 
-        if (bufferToWrite.hasRemaining()) {
-            bufferToWrite.compact();
-        } else {
+        if (!bufferToWrite.hasRemaining()) {
 
             this.outputQueue.remove(nextContainer);
 

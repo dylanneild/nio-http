@@ -14,12 +14,8 @@ import java.util.Iterator;
 
 public abstract class StringRequestHandler extends RequestHandler {
 
-    public StringRequestHandler() {
-        super();
-    }
-
     @Override
-    protected void listenForRequests() {
+    protected final void listenForRequests() {
 
         try {
 

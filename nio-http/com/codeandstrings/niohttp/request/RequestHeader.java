@@ -42,7 +42,11 @@ public class RequestHeader implements Externalizable {
 		this.headers = headers;
 	}
 
-	public String getHeader(String name) {
+    public String getCaseInsensitiveHeaderName(String name) {
+        return headers.getCaseInsensitiveHeaderName(name);
+    }
+
+    public String getHeader(String name) {
 		List<String> values = this.headers.getValue(name);
 
 		if (values.size() == 1)

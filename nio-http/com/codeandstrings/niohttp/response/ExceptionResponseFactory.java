@@ -21,7 +21,10 @@ public class ExceptionResponseFactory {
 		r.setCode(this.e.getCode());
 		r.setDescription(this.e.getDescription());
 
-        r.addHeader("Server", parameters.getServerString());
+        if (parameters != null) {
+            r.addHeader("Server", parameters.getServerString());
+        }
+
 		r.addHeader("Content-Length", "0");
 		r.addHeader("Connecton", "close");
 

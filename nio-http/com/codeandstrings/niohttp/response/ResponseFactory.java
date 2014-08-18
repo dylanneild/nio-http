@@ -1,7 +1,9 @@
 package com.codeandstrings.niohttp.response;
 
 import java.nio.ByteBuffer;
+import java.util.Date;
 
+import com.codeandstrings.niohttp.data.DateUtils;
 import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
@@ -10,19 +12,17 @@ import com.codeandstrings.niohttp.request.Request;
 
 public class ResponseFactory {
 
-	public static Response createResponse(String content, String contentType,
-			Request request) {
+    private static Response getBasicResponse(Request request) {
 
         HttpProtocol protocol = request.getRequestProtocol();
         RequestMethod requestMethod = request.getRequestMethod();
 
-		Response r = new Response(protocol, requestMethod);
+        Response r = new Response(protocol, requestMethod);
 
-		if (protocol != HttpProtocol.HTTP0_9) {
+        if (protocol != HttpProtocol.HTTP0_9) {
             r.setCode(200);
-			r.setDescription("OK");
-			r.addHeader("Content-Type", contentType);
-			r.addHeader("Content-Length", String.valueOf(content.length()));
+            r.setDescription("OK");
+            r.addHeader("Date", DateUtils.getRfc822DateString(new Date()));
 
             if (request.isKeepAlive()) {
                 r.addHeader("Connection", "Keep-Alive");
@@ -30,6 +30,31 @@ public class ResponseFactory {
                 r.addHeader("Connection", "close");
             }
         }
+
+        return r;
+
+    }
+
+    public static Response createResponse(String contentType, long contentSize, Request request) {
+
+        HttpProtocol protocol = request.getRequestProtocol();
+        Response r = getBasicResponse(request);
+
+        if (protocol != HttpProtocol.HTTP0_9) {
+            r.setCode(200);
+            r.setDescription("OK");
+            r.addHeader("Content-Type", contentType);
+            r.addHeader("Content-Length", String.valueOf(contentSize));
+        }
+
+        return r;
+
+    }
+
+	public static Response createResponse(String content, String contentType,
+			Request request) {
+
+        Response r = createResponse(contentType, content.length(), request);
 
         byte bytes[] = content.getBytes();
 		ByteBuffer contentBuffer = ByteBuffer.allocate(bytes.length);
