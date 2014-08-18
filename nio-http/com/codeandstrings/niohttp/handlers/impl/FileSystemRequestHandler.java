@@ -13,7 +13,6 @@ import com.codeandstrings.niohttp.response.Response;
 import com.codeandstrings.niohttp.response.ResponseFactory;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
@@ -24,7 +23,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-class FileSystemRequestHandler$Task {
+class FileSystemRequestHandler$FileTask {
 
     private AsynchronousFileChannel fileChannel;
     private Future<Integer> future;
@@ -36,7 +35,7 @@ class FileSystemRequestHandler$Task {
     private long sessionId;
     private long nextSequence;
 
-    public FileSystemRequestHandler$Task(Path path, String mimeType, Request request) throws IOException {
+    public FileSystemRequestHandler$FileTask(Path path, String mimeType, Request request) throws IOException {
         this.fileChannel = AsynchronousFileChannel.open(path, StandardOpenOption.READ);
         this.fileSize = Files.size(path);
         this.position = 0;
@@ -114,7 +113,7 @@ class FileSystemRequestHandler$Task {
 
 public abstract class FileSystemRequestHandler extends RequestHandler {
 
-    private ArrayList<FileSystemRequestHandler$Task> tasks;
+    private ArrayList<FileSystemRequestHandler$FileTask> tasks;
     private FileSystem fileSystem;
     private MimeTypes mimeTypes;
 
@@ -122,7 +121,7 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
     public abstract String getUriPrefix();
 
     public FileSystemRequestHandler() {
-        this.tasks = new ArrayList<FileSystemRequestHandler$Task>();
+        this.tasks = new ArrayList<FileSystemRequestHandler$FileTask>();
         this.fileSystem = FileSystems.getDefault();
         this.mimeTypes = MimeTypes.getInstance();
     }
@@ -264,10 +263,10 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
         }
 
         // allocate a task and start the reading process
-        FileSystemRequestHandler$Task task = null;
+        FileSystemRequestHandler$FileTask task = null;
 
         try {
-            task = new FileSystemRequestHandler$Task(path, this.mimeTypes.getMimeTypeForFilename(path.toString()), request);
+            task = new FileSystemRequestHandler$FileTask(path, this.mimeTypes.getMimeTypeForFilename(path.toString()), request);
             task.readNextBuffer();
         } catch (Exception e) {
             this.sendException(new InternalServerErrorException(e), request, selector);
@@ -333,7 +332,7 @@ public abstract class FileSystemRequestHandler extends RequestHandler {
 
                             // there are no further write events to execute;
                             // let's see if there are more file read events to refill the buffers
-                            FileSystemRequestHandler$Task task = this.tasks.size() > 0 ? this.tasks.remove(0) : null;
+                            FileSystemRequestHandler$FileTask task = this.tasks.size() > 0 ? this.tasks.remove(0) : null;
 
                             if (task == null) {
                                 channel.register(selector, 0);
