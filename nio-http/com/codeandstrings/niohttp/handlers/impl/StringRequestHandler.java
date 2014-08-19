@@ -47,7 +47,7 @@ public abstract class StringRequestHandler extends RequestHandler {
                                     this.getContentType(), request);
 
                             ResponseContent container = new ResponseContent(request.getSessionId(),
-                                    request.getRequestId(), response.getByteBuffer(), 0, true);
+                                    request.getRequestId(), response.getByteBuffer(), true);
 
                             this.sendBufferContainer(container);
                             this.getHandlerWriteChannel().register(selector, SelectionKey.OP_WRITE);

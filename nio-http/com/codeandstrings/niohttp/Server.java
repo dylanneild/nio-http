@@ -148,7 +148,7 @@ public class Server implements Runnable {
                                 Response r = (new ExceptionResponseFactory(e)).create(this.parameters);
 
                                 ResponseContent container = new ResponseContent(session.getSessionId(),
-                                        -1, r.getByteBuffer(), 0, true);
+                                        -1, r.getByteBuffer(), true);
 
                                 session.queueBuffer(container);
 

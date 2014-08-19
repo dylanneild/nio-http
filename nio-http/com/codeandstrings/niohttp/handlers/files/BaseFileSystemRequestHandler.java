@@ -98,7 +98,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
         ExceptionResponseFactory responseFactory = new ExceptionResponseFactory(e);
         Response response = responseFactory.create(request.getServerParameters());
-        ResponseContent container = new ResponseContent(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), 0, true);
+        ResponseContent container = new ResponseContent(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), true);
 
         this.sendBufferContainer(container);
         this.scheduleWrites(selector);
@@ -129,7 +129,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
         html.append(this.getDirectoryFooter(request));
 
         Response response = ResponseFactory.createResponse(html.toString(), "text/html", request);
-        ResponseContent responseHeader = new ResponseContent(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), 0, true);
+        ResponseContent responseHeader = new ResponseContent(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), true);
         this.sendBufferContainer(responseHeader);
         this.scheduleWrites(selector);
 
@@ -176,7 +176,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
         }
 
         ResponseContent responseHeader = new ResponseContent(request.getSessionId(), request.getRequestId(),
-                r.getByteBuffer(), 0, (skipBody || notModified));
+                r.getByteBuffer(), (skipBody || notModified));
 
         this.sendBufferContainer(responseHeader);
 
@@ -234,7 +234,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
             // we have a buffer to send and we know it
             ResponseContent responseContent = new ResponseContent(task.getSessionId(),
-                    task.getRequestId(), nextBuffer, task.getNextSequence(), finalBuffer);
+                    task.getRequestId(), nextBuffer, finalBuffer);
 
             this.sendBufferContainer(responseContent);
 

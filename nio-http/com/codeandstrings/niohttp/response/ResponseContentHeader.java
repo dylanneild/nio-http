@@ -7,7 +7,6 @@ public class ResponseContentHeader implements Externalizable {
 
     private long sessionId;
     private long requestId;
-    private long sequenceId;
     private boolean lastBufferForRequest;
     private int bufferSize;
 
@@ -15,7 +14,6 @@ public class ResponseContentHeader implements Externalizable {
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         this.sessionId = in.readLong();
         this.requestId = in.readLong();
-        this.sequenceId = in.readLong();
         this.lastBufferForRequest = in.readBoolean();
         this.bufferSize = in.readInt();
     }
@@ -24,17 +22,15 @@ public class ResponseContentHeader implements Externalizable {
     public void writeExternal(ObjectOutput out) throws IOException {
         out.writeLong(this.sessionId);
         out.writeLong(this.requestId);
-        out.writeLong(this.sequenceId);
         out.writeBoolean(this.lastBufferForRequest);
         out.writeInt(this.bufferSize);
     }
 
     public ResponseContentHeader() {}
 
-    public ResponseContentHeader(long sessionId, long requestId, long sequenceId, boolean lastBufferForRequest) {
+    public ResponseContentHeader(long sessionId, long requestId, boolean lastBufferForRequest) {
         this.sessionId = sessionId;
         this.requestId = requestId;
-        this.sequenceId = sequenceId;
         this.lastBufferForRequest = lastBufferForRequest;
     }
 
@@ -83,14 +79,6 @@ public class ResponseContentHeader implements Externalizable {
         this.requestId = requestId;
     }
 
-    public long getSequenceId() {
-        return sequenceId;
-    }
-
-    public void setSequenceId(long sequenceId) {
-        this.sequenceId = sequenceId;
-    }
-
     public boolean isLastBufferForRequest() {
         return lastBufferForRequest;
     }
@@ -117,7 +105,6 @@ public class ResponseContentHeader implements Externalizable {
         if (bufferSize != that.bufferSize) return false;
         if (lastBufferForRequest != that.lastBufferForRequest) return false;
         if (requestId != that.requestId) return false;
-        if (sequenceId != that.sequenceId) return false;
         if (sessionId != that.sessionId) return false;
 
         return true;
@@ -127,7 +114,6 @@ public class ResponseContentHeader implements Externalizable {
     public int hashCode() {
         int result = (int) (sessionId ^ (sessionId >>> 32));
         result = 31 * result + (int) (requestId ^ (requestId >>> 32));
-        result = 31 * result + (int) (sequenceId ^ (sequenceId >>> 32));
         result = 31 * result + (lastBufferForRequest ? 1 : 0);
         result = 31 * result + bufferSize;
         return result;
@@ -135,10 +121,9 @@ public class ResponseContentHeader implements Externalizable {
 
     @Override
     public String toString() {
-        return "BufferContainerHeader{" +
+        return "ResponseContentHeader{" +
                 "sessionId=" + sessionId +
                 ", requestId=" + requestId +
-                ", sequenceId=" + sequenceId +
                 ", lastBufferForRequest=" + lastBufferForRequest +
                 ", bufferSize=" + bufferSize +
                 '}';

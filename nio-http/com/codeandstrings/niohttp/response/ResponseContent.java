@@ -10,8 +10,8 @@ public class ResponseContent {
 //    private ByteBuffer chunkHeader;
 //    private ByteBuffer chunkFooter;
 
-    public ResponseContent(long sessionId, long requestId, ByteBuffer buffer, long sequenceId, boolean lastBufferForRequest) {
-        this.bufferHeader = new ResponseContentHeader(sessionId, requestId, sequenceId, lastBufferForRequest);
+    public ResponseContent(long sessionId, long requestId, ByteBuffer buffer, boolean lastBufferForRequest) {
+        this.bufferHeader = new ResponseContentHeader(sessionId, requestId, lastBufferForRequest);
         this.buffer = buffer;
     }
 
@@ -96,14 +96,6 @@ public class ResponseContent {
 
     public long getRequestId() {
         return bufferHeader.getRequestId();
-    }
-
-    public long getSequenceId() {
-        return bufferHeader.getSequenceId();
-    }
-
-    public void setSequenceId(long sequenceId) {
-        bufferHeader.setSequenceId(sequenceId);
     }
 
     public void setLastBufferForRequest(boolean lastBufferForRequest) {

@@ -37,7 +37,6 @@ class FileRequestObject {
         this.mimeType = mimeType;
         this.requestId = request.getRequestId();
         this.sessionId = request.getSessionId();
-        this.nextSequence = 0;
         this.lastModified = new Date(Files.getLastModifiedTime(path, LinkOption.NOFOLLOW_LINKS).toMillis());
         this.etag = FileUtils.computeEtag(path.getFileName().toString(), this.lastModified);
     }
@@ -62,11 +61,6 @@ class FileRequestObject {
 
     public long getSessionId() {
         return sessionId;
-    }
-
-    public long getNextSequence() {
-        this.nextSequence++;
-        return this.nextSequence;
     }
 
     public long getFileSize() {
