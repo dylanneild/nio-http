@@ -1,13 +1,36 @@
 package com.codeandstrings.niohttp.data;
 
-public class Parameters {
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 
-	private int port;
+public class Parameters implements Externalizable {
+
+    private static final long serialVersionUID = -3428150652513350665L;
+
+    private int port;
 	private String serverString;
 	private String serverIp;
 	private int maximumPostSize;
 
-	private void configureDefaultParameters() {
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeInt(this.port);
+        out.writeObject(this.serverString == null ? "" : this.serverString);
+        out.writeObject(this.serverIp == null ? "" : this.serverIp);
+        out.writeInt(this.maximumPostSize);
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        this.port = in.readInt();
+        this.serverString = (String)in.readObject();
+        this.serverIp = (String)in.readObject();
+        this.maximumPostSize = in.readInt();
+    }
+
+    private void configureDefaultParameters() {
 		this.port = 8888;
 		this.serverString = "NIO-HTTP";
 		this.serverIp = null;
