@@ -32,7 +32,7 @@ public abstract class FileSystemRequestHandler extends BaseFileSystemRequestHand
         r.append(path);
         r.append("</h1>");
         r.append("<hr><p>");
-        r.append("<table>");
+        r.append("<table cellspacing=\"3\">");
 
         return r.toString();
 
@@ -72,14 +72,14 @@ public abstract class FileSystemRequestHandler extends BaseFileSystemRequestHand
         r.append("<tr>");
 
         if (directoryMember.isDirectory()) {
-            r.append("<td><b>Folder</b></td>");
+            r.append("<td align=\"right\"><b>Folder</b></td>");
         } else {
-            r.append("<td><b>");
+            r.append("<td align=\"right\"><b>");
             r.append(getFileSizeString(directoryMember.getSize()));
             r.append("</b></td>");
         }
 
-        r.append("<td>");
+        r.append("<td>&nbsp;</td><td>");
         r.append("<a href=\"");
         r.append(path);
 
