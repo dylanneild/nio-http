@@ -61,12 +61,6 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
         String prefixRemoved = decoded.substring(this.getUriPrefix().length());
 
-        // TODO: The notion of which files should be considered index files
-        // TODO: Needs to be implemented.
-
-        if (prefixRemoved.length() == 0)
-            prefixRemoved = "index.html";
-
         if (prefixRemoved.indexOf("..") != -1)
             throw new ForbiddenException();
 
@@ -81,6 +75,8 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
         if (!Files.isReadable(path)) {
             throw new ForbiddenException();
         }
+
+        // TODO: This is where we'd ratify to see if there was an index file...
 
         return path;
 
@@ -180,7 +176,9 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             BaseFileSystemRequestHandler.addFileInformationToRequest(task, r);
         }
 
-        BufferContainer responseHeader = new BufferContainer(request.getSessionId(), request.getRequestId(), r.getByteBuffer(), 0, (skipBody || notModified));
+        BufferContainer responseHeader = new BufferContainer(request.getSessionId(), request.getRequestId(),
+                r.getByteBuffer(), 0, (skipBody || notModified));
+
         this.sendBufferContainer(responseHeader);
 
         // if this is a HEAD request, don't bother sending back content
