@@ -164,7 +164,7 @@ public class Server implements Runnable {
                                 key.attach(requestHandler);
                             }
 
-                            BufferContainer container = (BufferContainer)requestHandler.executeBufferReadEvent();
+                            BufferContainer container = requestHandler.executeBufferReadEvent();
 
                             if (container != null) {
                                 Session session = this.sessions.get(container.getSessionId());
