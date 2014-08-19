@@ -1,6 +1,7 @@
-package com.codeandstrings.niohttp.handlers;
+package com.codeandstrings.niohttp.handlers.broker;
 
 import com.codeandstrings.niohttp.exceptions.InvalidHandlerException;
+import com.codeandstrings.niohttp.handlers.base.RequestHandler;
 import com.codeandstrings.niohttp.request.Request;
 
 import java.nio.channels.ClosedChannelException;
