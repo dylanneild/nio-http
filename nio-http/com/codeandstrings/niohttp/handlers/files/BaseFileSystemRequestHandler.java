@@ -7,7 +7,7 @@ import com.codeandstrings.niohttp.enums.RequestMethod;
 import com.codeandstrings.niohttp.exceptions.http.*;
 import com.codeandstrings.niohttp.handlers.base.RequestHandler;
 import com.codeandstrings.niohttp.request.Request;
-import com.codeandstrings.niohttp.response.BufferContainer;
+import com.codeandstrings.niohttp.response.ResponseContent;
 import com.codeandstrings.niohttp.response.ExceptionResponseFactory;
 import com.codeandstrings.niohttp.response.Response;
 import com.codeandstrings.niohttp.response.ResponseFactory;
@@ -18,7 +18,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.file.*;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
 
@@ -99,7 +98,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
         ExceptionResponseFactory responseFactory = new ExceptionResponseFactory(e);
         Response response = responseFactory.create(request.getServerParameters());
-        BufferContainer container = new BufferContainer(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), 0, true);
+        ResponseContent container = new ResponseContent(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), 0, true);
 
         this.sendBufferContainer(container);
         this.scheduleWrites(selector);
@@ -130,7 +129,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
         html.append(this.getDirectoryFooter(request));
 
         Response response = ResponseFactory.createResponse(html.toString(), "text/html", request);
-        BufferContainer responseHeader = new BufferContainer(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), 0, true);
+        ResponseContent responseHeader = new ResponseContent(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), 0, true);
         this.sendBufferContainer(responseHeader);
         this.scheduleWrites(selector);
 
@@ -176,7 +175,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             BaseFileSystemRequestHandler.addFileInformationToRequest(task, r);
         }
 
-        BufferContainer responseHeader = new BufferContainer(request.getSessionId(), request.getRequestId(),
+        ResponseContent responseHeader = new ResponseContent(request.getSessionId(), request.getRequestId(),
                 r.getByteBuffer(), 0, (skipBody || notModified));
 
         this.sendBufferContainer(responseHeader);
@@ -234,10 +233,10 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             }
 
             // we have a buffer to send and we know it
-            BufferContainer bufferContainer = new BufferContainer(task.getSessionId(),
+            ResponseContent responseContent = new ResponseContent(task.getSessionId(),
                     task.getRequestId(), nextBuffer, task.getNextSequence(), finalBuffer);
 
-            this.sendBufferContainer(bufferContainer);
+            this.sendBufferContainer(responseContent);
 
             if (finalBuffer) {
                 task.close();

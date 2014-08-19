@@ -1,7 +1,7 @@
 package com.codeandstrings.niohttp.handlers.base;
 
-import com.codeandstrings.niohttp.response.BufferContainer;
-import com.codeandstrings.niohttp.response.BufferContainerHeader;
+import com.codeandstrings.niohttp.response.ResponseContent;
+import com.codeandstrings.niohttp.response.ResponseContentHeader;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -149,12 +149,12 @@ public class BufferReader {
 
     }
 
-    private BufferContainerHeader getContainerHeader() throws IOException, ClassNotFoundException {
+    private ResponseContentHeader getContainerHeader() throws IOException, ClassNotFoundException {
  
     	ByteArrayInputStream bais = new ByteArrayInputStream(currentHeaderBuffer.array());
         ObjectInputStream ois = new ObjectInputStream(bais);
 
-        BufferContainerHeader header = (BufferContainerHeader)ois.readObject();
+        ResponseContentHeader header = (ResponseContentHeader)ois.readObject();
 
         ois.close();
         
@@ -162,7 +162,7 @@ public class BufferReader {
           
     }
     
-    public BufferContainer readBufferFromChannel() throws IOException, ClassNotFoundException {
+    public ResponseContent readBufferFromChannel() throws IOException, ClassNotFoundException {
 
         if (!executeBufferReadSize()) {
             return null;
@@ -174,13 +174,13 @@ public class BufferReader {
             return null;
         }
 
-        BufferContainerHeader header = getContainerHeader();
+        ResponseContentHeader header = getContainerHeader();
 
         if (!executeBufferRead(header.getBufferSize())) {
             return null;
         }
 
-        BufferContainer r = new BufferContainer(header, this.currentBuffer);
+        ResponseContent r = new ResponseContent(header, this.currentBuffer);
 
         this.reset();
 

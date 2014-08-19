@@ -14,7 +14,7 @@ import com.codeandstrings.niohttp.exceptions.tcp.CloseConnectionException;
 import com.codeandstrings.niohttp.handlers.base.RequestHandler;
 import com.codeandstrings.niohttp.handlers.broker.RequestHandlerBroker;
 import com.codeandstrings.niohttp.request.Request;
-import com.codeandstrings.niohttp.response.BufferContainer;
+import com.codeandstrings.niohttp.response.ResponseContent;
 import com.codeandstrings.niohttp.response.ExceptionResponseFactory;
 import com.codeandstrings.niohttp.response.Response;
 
@@ -147,7 +147,7 @@ public class Server implements Runnable {
 
                                 Response r = (new ExceptionResponseFactory(e)).create(this.parameters);
 
-                                BufferContainer container = new BufferContainer(session.getSessionId(),
+                                ResponseContent container = new ResponseContent(session.getSessionId(),
                                         -1, r.getByteBuffer(), 0, true);
 
                                 session.queueBuffer(container);
@@ -164,7 +164,7 @@ public class Server implements Runnable {
                                 key.attach(requestHandler);
                             }
 
-                            BufferContainer container = requestHandler.executeBufferReadEvent();
+                            ResponseContent container = requestHandler.executeBufferReadEvent();
 
                             if (container != null) {
                                 Session session = this.sessions.get(container.getSessionId());

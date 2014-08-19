@@ -3,7 +3,7 @@ package com.codeandstrings.niohttp.response;
 import java.io.*;
 import java.nio.ByteBuffer;
 
-public class BufferContainerHeader implements Externalizable {
+public class ResponseContentHeader implements Externalizable {
 
     private long sessionId;
     private long requestId;
@@ -29,9 +29,9 @@ public class BufferContainerHeader implements Externalizable {
         out.writeInt(this.bufferSize);
     }
 
-    public BufferContainerHeader() {}
+    public ResponseContentHeader() {}
 
-    public BufferContainerHeader(long sessionId, long requestId, long sequenceId, boolean lastBufferForRequest) {
+    public ResponseContentHeader(long sessionId, long requestId, long sequenceId, boolean lastBufferForRequest) {
         this.sessionId = sessionId;
         this.requestId = requestId;
         this.sequenceId = sequenceId;
@@ -54,12 +54,12 @@ public class BufferContainerHeader implements Externalizable {
 
     }
 
-    public static BufferContainerHeader fromByteBuffer(ByteBuffer buffer) throws IOException, ClassNotFoundException {
+    public static ResponseContentHeader fromByteBuffer(ByteBuffer buffer) throws IOException, ClassNotFoundException {
 
         ByteArrayInputStream bais = new ByteArrayInputStream(buffer.array());
         ObjectInputStream ois = new ObjectInputStream(bais);
 
-        BufferContainerHeader r = (BufferContainerHeader)ois.readObject();
+        ResponseContentHeader r = (ResponseContentHeader)ois.readObject();
 
         ois.close();
 
@@ -112,7 +112,7 @@ public class BufferContainerHeader implements Externalizable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        BufferContainerHeader that = (BufferContainerHeader) o;
+        ResponseContentHeader that = (ResponseContentHeader) o;
 
         if (bufferSize != that.bufferSize) return false;
         if (lastBufferForRequest != that.lastBufferForRequest) return false;

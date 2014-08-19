@@ -1,6 +1,6 @@
 package com.codeandstrings.niohttp.handlers.base;
 
-import com.codeandstrings.niohttp.response.BufferContainer;
+import com.codeandstrings.niohttp.response.ResponseContent;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -10,17 +10,17 @@ import java.util.ArrayList;
 public class BufferWriter {
 
     private Pipe.SinkChannel channel;
-    private ArrayList<BufferContainer> queue;
+    private ArrayList<ResponseContent> queue;
     private ByteBuffer currentSizeBuffer;
     private ByteBuffer currentHeaderBuffer;
     private ByteBuffer currentDataBuffer;
 
     public BufferWriter (Pipe.SinkChannel channel) {
         this.channel = channel;
-        this.queue = new ArrayList<BufferContainer>();
+        this.queue = new ArrayList<ResponseContent>();
     }
 
-    public void sendBufferContainer(BufferContainer r) {
+    public void sendBufferContainer(ResponseContent r) {
         this.queue.add(r);
     }
 
@@ -29,7 +29,7 @@ public class BufferWriter {
         if (queue.size() == 0)
             return false;
 
-        BufferContainer container = queue.remove(0);
+        ResponseContent container = queue.remove(0);
 
         this.currentHeaderBuffer = container.getHeaderAsByteBuffer();
         this.currentSizeBuffer = ByteBuffer.allocate(Integer.SIZE / 8).putInt(currentHeaderBuffer.capacity());

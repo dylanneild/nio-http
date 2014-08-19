@@ -17,7 +17,7 @@ import com.codeandstrings.niohttp.exceptions.tcp.CloseConnectionException;
 import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.request.RequestBodyFactory;
 import com.codeandstrings.niohttp.request.RequestHeaderFactory;
-import com.codeandstrings.niohttp.response.BufferContainer;
+import com.codeandstrings.niohttp.response.ResponseContent;
 
 class Session$Line {
 
@@ -72,7 +72,7 @@ public class Session {
      * Response Management
      */
     private ArrayList<Request> requestQueue;
-    private ArrayList<BufferContainer> outputQueue;
+    private ArrayList<ResponseContent> outputQueue;
 
     /**
      * Constructor for a new HTTP session.
@@ -91,7 +91,7 @@ public class Session {
         this.selector = selector;
         this.maxRequestSize = IdealBlockSize.VALUE;
         this.readBuffer = ByteBuffer.allocate(128);
-        this.outputQueue = new ArrayList<BufferContainer>();
+        this.outputQueue = new ArrayList<ResponseContent>();
         this.requestQueue = new ArrayList<Request>();
         this.parameters = parameters;
 
@@ -119,7 +119,7 @@ public class Session {
         return r;
     }
 
-    public void queueBuffer(BufferContainer container) throws IOException {
+    public void queueBuffer(ResponseContent container) throws IOException {
         this.outputQueue.add(container);
         this.setSelectionRequest(true);
     }
@@ -260,7 +260,7 @@ public class Session {
         }
 
         Request nextRequest = null;
-        BufferContainer nextContainer = null;
+        ResponseContent nextContainer = null;
 
         if (this.requestQueue.size() > 0) {
             nextRequest = this.requestQueue.get(0);
@@ -271,9 +271,9 @@ public class Session {
             // these are errors and can just go in order.
             nextContainer = this.outputQueue.get(0);
         } else {
-            for (BufferContainer bufferContainer : this.outputQueue) {
-                if (bufferContainer.getRequestId() == nextRequest.getRequestId()) {
-                    nextContainer = bufferContainer;
+            for (ResponseContent responseContent : this.outputQueue) {
+                if (responseContent.getRequestId() == nextRequest.getRequestId()) {
+                    nextContainer = responseContent;
                     break;
                 }
             }

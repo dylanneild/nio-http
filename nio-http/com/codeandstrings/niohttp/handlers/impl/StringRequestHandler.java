@@ -2,7 +2,7 @@ package com.codeandstrings.niohttp.handlers.impl;
 
 import com.codeandstrings.niohttp.handlers.base.RequestHandler;
 import com.codeandstrings.niohttp.request.Request;
-import com.codeandstrings.niohttp.response.BufferContainer;
+import com.codeandstrings.niohttp.response.ResponseContent;
 import com.codeandstrings.niohttp.response.Response;
 import com.codeandstrings.niohttp.response.ResponseFactory;
 
@@ -46,7 +46,7 @@ public abstract class StringRequestHandler extends RequestHandler {
                             Response response = ResponseFactory.createResponse(this.handleRequest(request),
                                     this.getContentType(), request);
 
-                            BufferContainer container = new BufferContainer(request.getSessionId(),
+                            ResponseContent container = new ResponseContent(request.getSessionId(),
                                     request.getRequestId(), response.getByteBuffer(), 0, true);
 
                             this.sendBufferContainer(container);

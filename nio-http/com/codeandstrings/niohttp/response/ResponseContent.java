@@ -3,20 +3,71 @@ package com.codeandstrings.niohttp.response;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class BufferContainer {
+public class ResponseContent {
 
-    private BufferContainerHeader bufferHeader;
+    private ResponseContentHeader bufferHeader;
 	private ByteBuffer buffer;
+//    private ByteBuffer chunkHeader;
+//    private ByteBuffer chunkFooter;
 
-    public BufferContainer(long sessionId, long requestId, ByteBuffer buffer, long sequenceId, boolean lastBufferForRequest) {
-        this.bufferHeader = new BufferContainerHeader(sessionId, requestId, sequenceId, lastBufferForRequest);
+    public ResponseContent(long sessionId, long requestId, ByteBuffer buffer, long sequenceId, boolean lastBufferForRequest) {
+        this.bufferHeader = new ResponseContentHeader(sessionId, requestId, sequenceId, lastBufferForRequest);
         this.buffer = buffer;
     }
 
-    public BufferContainer(BufferContainerHeader bufferHeader, ByteBuffer buffer) {
+    public ResponseContent(ResponseContentHeader bufferHeader, ByteBuffer buffer) {
         this.bufferHeader = bufferHeader;
         this.buffer = buffer;
     }
+
+//    private byte[] getChunkHeader() {
+//        try {
+//            int size = this.buffer.remaining();
+//            byte s[] = Integer.toHexString(size).getBytes("ASCII");
+//            byte r[] = new byte[s.length + 2];
+//
+//            for (int i = 0; i < s.length; i++) {
+//                r[i] = s[i];
+//            }
+//
+//            r[r.length - 2] = 13;
+//            r[r.length - 1] = 10;
+//
+//            return r;
+//        } catch (Exception e) {
+//            return null;
+//        }
+//
+//    }
+//
+//    private byte[] getChunkFooter() {
+//
+//        if (this.isLastBufferForRequest()) {
+//            byte r[] = {13, 10, 48, 13, 10, 13, 10};
+//            return r;
+//        } else {
+//            byte r[] = {13, 10};
+//            return r;
+//        }
+//
+//    }
+//
+//    public void chunkBuffer() {
+//
+//        byte[] chunkHeader = getChunkHeader();
+//        byte[] chunkFooter = getChunkFooter();
+//
+//        ByteBuffer replacement = ByteBuffer.allocate(this.getBuffer().remaining() + chunkHeader.length + chunkFooter.length);
+//
+//        replacement.put(chunkHeader);
+//        replacement.put(this.buffer);
+//        replacement.put(chunkFooter);
+//
+//        replacement.flip();
+//
+//        this.buffer = replacement;
+//
+//    }
 
     public ByteBuffer getBuffer() {
 		return buffer;
@@ -66,9 +117,9 @@ public class BufferContainer {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof BufferContainer)) return false;
+        if (!(o instanceof ResponseContent)) return false;
 
-        BufferContainer that = (BufferContainer) o;
+        ResponseContent that = (ResponseContent) o;
 
         if (buffer != null ? !buffer.equals(that.buffer) : that.buffer != null) return false;
         if (bufferHeader != null ? !bufferHeader.equals(that.bufferHeader) : that.bufferHeader != null) return false;

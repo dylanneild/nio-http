@@ -1,7 +1,7 @@
 package com.codeandstrings.niohttp.handlers.base;
 
 import com.codeandstrings.niohttp.request.Request;
-import com.codeandstrings.niohttp.response.BufferContainer;
+import com.codeandstrings.niohttp.response.ResponseContent;
 
 import java.io.*;
 import java.nio.channels.Pipe;
@@ -71,7 +71,7 @@ public abstract class RequestHandler implements Runnable {
         this.requestWriter.sendRequest(r);
     }
 
-    public void sendBufferContainer(BufferContainer b) {
+    public void sendBufferContainer(ResponseContent b) {
         this.bufferWriter.sendBufferContainer(b);
     }
 
@@ -79,7 +79,7 @@ public abstract class RequestHandler implements Runnable {
         return this.bufferWriter.executeBufferWriteEvent();
     }
 
-    public BufferContainer executeBufferReadEvent() throws IOException, ClassNotFoundException {
+    public ResponseContent executeBufferReadEvent() throws IOException, ClassNotFoundException {
         return this.bufferReader.readBufferFromChannel();
     }
 
