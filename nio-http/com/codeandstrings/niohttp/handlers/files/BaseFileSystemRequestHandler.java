@@ -98,7 +98,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
     private void sendException(HttpException e, Request request, Selector selector) throws ClosedChannelException {
 
         ExceptionResponseFactory responseFactory = new ExceptionResponseFactory(e);
-        Response response = responseFactory.create(null);
+        Response response = responseFactory.create(request.getServerParameters());
         BufferContainer container = new BufferContainer(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), 0, true);
 
         this.sendBufferContainer(container);

@@ -28,6 +28,7 @@ public class ResponseFactory {
         r.addHeader("Date", DateUtils.getRfc822DateStringGMT(new Date()));
         r.addHeader("Last-Modified", DateUtils.getRfc822DateStringGMT(lastModified));
         r.addHeader("ETag", etag);
+        r.addHeader("Server", request.getServerParameters().getServerString());
 
         if (request.isKeepAlive()) {
             r.addHeader("Connection", "Keep-Alive");
@@ -49,6 +50,7 @@ public class ResponseFactory {
             r.setCode(200);
             r.setDescription("OK");
             r.addHeader("Date", DateUtils.getRfc822DateStringGMT(new Date()));
+            r.addHeader("Server", request.getServerParameters().getServerString());
 
             if (request.isKeepAlive()) {
                 r.addHeader("Connection", "Keep-Alive");

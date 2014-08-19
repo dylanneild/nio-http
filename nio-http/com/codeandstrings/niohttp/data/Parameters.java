@@ -7,7 +7,7 @@ import java.io.ObjectOutput;
 
 public class Parameters implements Externalizable {
 
-    private static final long serialVersionUID = -3428150652513350665L;
+    private static final long serialVersionUID = 9070633037021307477L;
 
     private int port;
 	private String serverString;
@@ -32,7 +32,7 @@ public class Parameters implements Externalizable {
 
     private void configureDefaultParameters() {
 		this.port = 8888;
-		this.serverString = "NIO-HTTP";
+		this.serverString = "NIO-HTTP v0.1";
 		this.serverIp = null;
 		this.maximumPostSize = (8 * 1024 * 1024);
 	}
@@ -52,7 +52,7 @@ public class Parameters implements Externalizable {
         this.port = port;
 	}
 
-	public String getServerString() {
+    public String getServerString() {
 		return serverString;
 	}
 
@@ -84,50 +84,37 @@ public class Parameters implements Externalizable {
 		this.maximumPostSize = maximumPostSize;
 	}
 
-	@Override
-	public String toString() {
-		return "Parameters [port=" + port + ", serverString=" + serverString
-				+ ", serverIp=" + serverIp + ", maximumPostSize="
-				+ maximumPostSize + "]";
-	}
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + maximumPostSize;
-		result = prime * result + port;
-		result = prime * result
-				+ ((serverIp == null) ? 0 : serverIp.hashCode());
-		result = prime * result
-				+ ((serverString == null) ? 0 : serverString.hashCode());
-		return result;
-	}
+        Parameters that = (Parameters) o;
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		Parameters other = (Parameters) obj;
-		if (maximumPostSize != other.maximumPostSize)
-			return false;
-		if (port != other.port)
-			return false;
-		if (serverIp == null) {
-			if (other.serverIp != null)
-				return false;
-		} else if (!serverIp.equals(other.serverIp))
-			return false;
-		if (serverString == null) {
-			if (other.serverString != null)
-				return false;
-		} else if (!serverString.equals(other.serverString))
-			return false;
-		return true;
-	}
+        if (maximumPostSize != that.maximumPostSize) return false;
+        if (port != that.port) return false;
+        if (serverIp != null ? !serverIp.equals(that.serverIp) : that.serverIp != null) return false;
+        if (serverString != null ? !serverString.equals(that.serverString) : that.serverString != null) return false;
 
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = port;
+        result = 31 * result + (serverString != null ? serverString.hashCode() : 0);
+        result = 31 * result + (serverIp != null ? serverIp.hashCode() : 0);
+        result = 31 * result + maximumPostSize;
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "Parameters{" +
+                "port=" + port +
+                ", serverString='" + serverString + '\'' +
+                ", serverIp='" + serverIp + '\'' +
+                ", maximumPostSize=" + maximumPostSize +
+                '}';
+    }
 }

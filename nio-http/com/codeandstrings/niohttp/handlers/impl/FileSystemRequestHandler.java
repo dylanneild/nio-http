@@ -108,7 +108,9 @@ public abstract class FileSystemRequestHandler extends BaseFileSystemRequestHand
         StringBuilder r = new StringBuilder();
 
         r.append("</table>");
-        r.append("</p><hr><p><pre>Directory index served at " + (new Date()).toString() + "</pre></p>");
+        r.append("</p><hr><p><pre>Directory index served at " + (new Date()).toString() + "<br>by ");
+        r.append(request.getServerParameters().getServerString());
+        r.append("</pre></p>");
 
         r.append("</body>");
         r.append("</html>");
