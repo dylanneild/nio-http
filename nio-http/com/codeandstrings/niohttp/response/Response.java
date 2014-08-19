@@ -24,11 +24,38 @@ public class Response {
 		this.method = method;
 		this.headers = new HeaderValues(true);
 	}
-     public void removeHeader(String name) {
+
+    public void removeHeader(String name) {
         headers.removeHeader(name);
     }
 
+    public boolean isChunkedTransfer() {
+        String te = headers.getSingleValueCaseInsensitive("transfer-encoding");
+
+        if (te != null && te.equalsIgnoreCase("chunked")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public String getHeaderCaseInsensitive(String header) {
+        return this.headers.getSingleValueCaseInsensitive(header);
+    }
+
 	public void addHeader(String name, String value) {
+
+        if (name != null && name.equalsIgnoreCase("transfer-encoding") && value != null && value.equalsIgnoreCase("chunked")) {
+            // remove content-length if this reponse is transfer-encoding: chunked;
+            // these are mutually exclusive
+            headers.removeHeader("content-length");
+        } else if (name != null && name.equalsIgnoreCase("content-length")) {
+            // likewise, if we'ere getting a content-length past make sure no transfer-encoding: chunked exists
+            if (this.isChunkedTransfer()) {
+                headers.removeHeader("transfer-encoding");
+            }
+        }
+
 		headers.addHeader(name, value);
 	}
 
