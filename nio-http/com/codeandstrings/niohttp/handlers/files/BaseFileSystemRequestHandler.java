@@ -95,6 +95,10 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
         this.getHandlerWriteChannel().register(selector, SelectionKey.OP_WRITE);
     }
 
+    private void descheduleWrites(Selector selector) throws ClosedChannelException {
+        this.getHandlerWriteChannel().register(selector, 0);
+    }
+
     private void sendException(HttpException e, Request request, Selector selector) throws ClosedChannelException {
 
         ExceptionResponseFactory responseFactory = new ExceptionResponseFactory(e);
@@ -198,15 +202,14 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
     }
 
-    private void executeFileReadProcedure(Selector selector) throws ExecutionException, InterruptedException, ClosedChannelException {
+    private boolean executeFileReadProcedure(Selector selector) throws ExecutionException, InterruptedException, ClosedChannelException {
 
         // there are no further write events to execute;
         // let's see if there are more file read events to refill the buffers
         FileRequestObject task = this.tasks.size() > 0 ? this.tasks.remove(0) : null;
 
         if (task == null) {
-            this.getHandlerWriteChannel().register(selector, 0);
-            return;
+            return false;
         }
 
         // the current buffer is ready.
@@ -241,9 +244,9 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             if (finalBuffer) {
                 task.close();
             }
-
-
         }
+
+        return true;
 
     }
 
@@ -285,7 +288,14 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
                     } else {
 
                         if (!this.executeBufferWriteEvent()) {
-                            this.executeFileReadProcedure(selector);
+
+                            boolean file = this.executeFileReadProcedure(selector);
+                            boolean directory = false;
+
+                            if (!file && !directory) {
+                                this.descheduleWrites(selector);
+                            }
+
                         }
 
                     }
