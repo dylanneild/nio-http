@@ -103,7 +103,7 @@ public abstract class FileSystemRequestHandler extends BaseFileSystemRequestHand
     }
 
     @Override
-    public String getDirectoryFooter() {
+    public String getDirectoryFooter(Request request) {
 
         StringBuilder r = new StringBuilder();
 

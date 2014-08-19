@@ -33,7 +33,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
     public abstract boolean isDirectoryListingsGenerated();
     public abstract String getDirectoryHeader(Request request);
     public abstract String getDirectoryListing(Request request, DirectoryMember directoryMember);
-    public abstract String getDirectoryFooter();
+    public abstract String getDirectoryFooter(Request request);
 
     public BaseFileSystemRequestHandler() {
         this.tasks = new ArrayList<FileRequestObject>();
@@ -127,7 +127,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             this.sendException(new InternalServerErrorException(e), request, selector);
         }
 
-        html.append(this.getDirectoryFooter());
+        html.append(this.getDirectoryFooter(request));
 
         Response response = ResponseFactory.createResponse(html.toString(), "text/html", request);
         BufferContainer responseHeader = new BufferContainer(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), 0, true);
