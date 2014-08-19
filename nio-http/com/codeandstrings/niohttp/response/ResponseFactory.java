@@ -108,6 +108,7 @@ public class ResponseFactory {
             // we can't rely on chunked to mark the end of the request
             r.removeHeader("Connection");
             r.addHeader("Connection", "close");
+            r.addHeader("Content-Type", contentType);
         }
         else {
             r.addHeader("Transfer-Encoding", "chunked");
