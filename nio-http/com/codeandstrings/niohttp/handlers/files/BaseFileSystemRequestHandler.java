@@ -20,6 +20,7 @@ import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.concurrent.ExecutionException;
 
 public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
@@ -29,6 +30,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
     public abstract String getFilePath();
     public abstract String getUriPrefix();
+    public abstract boolean isDirectoryListingsGenerated();
     public abstract String getDirectoryHeader(Request request);
     public abstract String getDirectoryListing(Request request, DirectoryMember directoryMember);
     public abstract String getDirectoryFooter();
@@ -144,47 +146,24 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
     }
 
-    private static boolean shouldSendNotModified(Request r, FileRequestObject task) {
-
-        String modifiedSince = r.getHeaderCaseInsensitive("If-Modified-Since");
-        String etagMatch = r.getHeaderCaseInsensitive("If-None-Match");
-
-        if (etagMatch != null && task.getEtag() != null && etagMatch.equals(task.getEtag())) {
-            return true;
-        }
-
-        if (modifiedSince != null) {
-
-            Date dateObject = DateUtils.parseRfc822DateString(modifiedSince);
-
-            if (dateObject == null) {
-                return false;
-            }
-
-            if (task.getLastModified().getTime() > dateObject.getTime()) {
-                return false;
-            } else {
-                return true;
-            }
-
-        }
-
-        return false;
-
-    }
-
     private final void serviceFileRequest(Path path, Request request, Selector selector) throws IOException {
 
         // we handle directories differently
         if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
-            serviceDirectoryRequest(path, request, selector);
+
+            if (!isDirectoryListingsGenerated()) {
+                this.sendException(new ForbiddenException(), request, selector);
+            } else {
+                serviceDirectoryRequest(path, request, selector);
+            }
+
             return;
         }
 
         // allocate a task and start the reading process
         FileRequestObject task = new FileRequestObject(path, this.mimeTypes.getMimeTypeForFilename(path.toString()), request);
         boolean skipBody = request.getRequestMethod() == RequestMethod.HEAD;
-        boolean notModified = shouldSendNotModified(request, task);
+        boolean notModified = task.isNotModified(request);
 
         Response r = null;
 
@@ -216,6 +195,55 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
         // schedule writes, no matter what (we're either sending a response or an exception)
         this.scheduleWrites(selector);
+
+    }
+
+    private void executeFileReadProcedure(Selector selector) throws ExecutionException, InterruptedException, ClosedChannelException {
+
+        // there are no further write events to execute;
+        // let's see if there are more file read events to refill the buffers
+        FileRequestObject task = this.tasks.size() > 0 ? this.tasks.remove(0) : null;
+
+        if (task == null) {
+            this.getHandlerWriteChannel().register(selector, 0);
+            return;
+        }
+
+        // the current buffer is ready.
+        if (!task.isBufferReady()) {
+            // return the task to the queue
+            this.tasks.add(task);
+        } else {
+
+            ByteBuffer nextBuffer = task.getBuffer();
+            boolean finalBuffer = false;
+
+            if (task.isReadCompleted()) {
+                // our buffer is ready and we're done reading.
+                // we're not going to add anything back because
+                // there is no reason to.
+                finalBuffer = true;
+            } else {
+                // our buffer is ready and we're not done reading.
+                // we've captured our buffer though, so get the next one
+                // re-add the task to the task array, which will move it to
+                // the bottom of the queue
+                task.readNextBuffer();
+                this.tasks.add(task);
+            }
+
+            // we have a buffer to send and we know it
+            BufferContainer bufferContainer = new BufferContainer(task.getSessionId(),
+                    task.getRequestId(), nextBuffer, task.getNextSequence(), finalBuffer);
+
+            this.sendBufferContainer(bufferContainer);
+
+            if (finalBuffer) {
+                task.close();
+            }
+
+
+        }
 
     }
 
@@ -257,53 +285,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
                     } else {
 
                         if (!this.executeBufferWriteEvent()) {
-
-                            // there are no further write events to execute;
-                            // let's see if there are more file read events to refill the buffers
-                            FileRequestObject task = this.tasks.size() > 0 ? this.tasks.remove(0) : null;
-
-                            if (task == null) {
-                                channel.register(selector, 0);
-                                ki.remove();
-                                continue;
-                            }
-
-                            // the current buffer is ready.
-                            if (!task.isBufferReady()) {
-                                // return the task to the queue
-                                this.tasks.add(task);
-                            } else {
-
-                                ByteBuffer nextBuffer = task.getBuffer();
-                                boolean finalBuffer = false;
-
-                                if (task.isReadCompleted()) {
-                                    // our buffer is ready and we're done reading.
-                                    // we're not going to add anything back because
-                                    // there is no reason to.
-                                    finalBuffer = true;
-                                } else {
-                                    // our buffer is ready and we're not done reading.
-                                    // we've captured our buffer though, so get the next one
-                                    // re-add the task to the task array, which will move it to
-                                    // the bottom of the queue
-                                    task.readNextBuffer();
-                                    this.tasks.add(task);
-                                }
-
-                                // we have a buffer to send and we know it
-                                BufferContainer bufferContainer = new BufferContainer(task.getSessionId(),
-                                        task.getRequestId(), nextBuffer, task.getNextSequence(), finalBuffer);
-
-                                this.sendBufferContainer(bufferContainer);
-
-                                if (finalBuffer) {
-                                    task.close();
-                                }
-
-
-                            }
-
+                            this.executeFileReadProcedure(selector);
                         }
 
                     }

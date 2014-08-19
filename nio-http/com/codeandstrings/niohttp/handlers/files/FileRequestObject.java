@@ -1,5 +1,6 @@
 package com.codeandstrings.niohttp.handlers.files;
 
+import com.codeandstrings.niohttp.data.DateUtils;
 import com.codeandstrings.niohttp.data.FileUtils;
 import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.request.Request;
@@ -111,6 +112,35 @@ class FileRequestObject {
 
         this.readBuffer = ByteBuffer.allocate(IdealBlockSize.VALUE * 8);
         this.future = this.fileChannel.read(this.readBuffer, position);
+    }
+
+    public boolean isNotModified(Request r) {
+
+        String modifiedSince = r.getHeaderCaseInsensitive("If-Modified-Since");
+        String etagMatch = r.getHeaderCaseInsensitive("If-None-Match");
+
+        if (etagMatch != null && this.getEtag() != null && etagMatch.equals(this.getEtag())) {
+            return true;
+        }
+
+        if (modifiedSince != null) {
+
+            Date dateObject = DateUtils.parseRfc822DateString(modifiedSince);
+
+            if (dateObject == null) {
+                return false;
+            }
+
+            if (this.getLastModified().getTime() > dateObject.getTime()) {
+                return false;
+            } else {
+                return true;
+            }
+
+        }
+
+        return false;
+
     }
 
 }
