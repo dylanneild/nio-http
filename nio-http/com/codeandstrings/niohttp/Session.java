@@ -135,7 +135,7 @@ public class Session {
 
         Request r = Request.generateRequest(this.sessionId, this.getNextRequestId(),
                 remote.getHostString(), remote.getPort(), headerFactory.build(),
-                bodyFactory.build());
+                bodyFactory.build(), this.parameters);
 
         return r;
 

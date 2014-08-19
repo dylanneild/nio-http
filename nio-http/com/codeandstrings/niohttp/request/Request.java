@@ -12,6 +12,7 @@ import java.util.Set;
 import javax.activation.MimeType;
 
 import com.codeandstrings.niohttp.data.NameValuePair;
+import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
 
@@ -24,6 +25,7 @@ public class Request implements Externalizable {
 	private int remotePort;
 	private RequestHeader header = null;
 	private RequestBody body = null;
+    private Parameters serverParameters;
 
     public Request() {}
 
@@ -36,6 +38,7 @@ public class Request implements Externalizable {
         out.writeInt(this.remotePort);
         out.writeObject(this.header);
         out.writeObject(this.body);
+        out.writeObject(this.serverParameters);
     }
 
     @Override
@@ -47,11 +50,12 @@ public class Request implements Externalizable {
         this.remotePort = in.readInt();
         this.header = (RequestHeader)in.readObject();
         this.body = (RequestBody)in.readObject();
+        this.serverParameters = (Parameters)in.readObject();
     }
 
     public static Request generateRequest(long sessionId, long requestId, String remoteAddr,
                                           int remotePort, RequestHeader header,
-                                          RequestBody body) {
+                                          RequestBody body, Parameters parameters) {
 
 		Request r = new Request();
 
@@ -62,6 +66,7 @@ public class Request implements Externalizable {
 		r.remotePort = remotePort;
 		r.header = header;
 		r.body = body;
+        r.serverParameters = parameters;
 
 		return r;
 	}
@@ -255,10 +260,14 @@ public class Request implements Externalizable {
         return sessionId;
     }
 
+    public Parameters getServerParameters() {
+        return serverParameters;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Request)) return false;
+        if (o == null || getClass() != o.getClass()) return false;
 
         Request request = (Request) o;
 
@@ -269,6 +278,8 @@ public class Request implements Externalizable {
         if (body != null ? !body.equals(request.body) : request.body != null) return false;
         if (header != null ? !header.equals(request.header) : request.header != null) return false;
         if (remoteAddr != null ? !remoteAddr.equals(request.remoteAddr) : request.remoteAddr != null) return false;
+        if (serverParameters != null ? !serverParameters.equals(request.serverParameters) : request.serverParameters != null)
+            return false;
 
         return true;
     }
@@ -282,6 +293,7 @@ public class Request implements Externalizable {
         result = 31 * result + remotePort;
         result = 31 * result + (header != null ? header.hashCode() : 0);
         result = 31 * result + (body != null ? body.hashCode() : 0);
+        result = 31 * result + (serverParameters != null ? serverParameters.hashCode() : 0);
         return result;
     }
 
@@ -295,6 +307,7 @@ public class Request implements Externalizable {
                 ", remotePort=" + remotePort +
                 ", header=" + header +
                 ", body=" + body +
+                ", serverParameters=" + serverParameters +
                 '}';
     }
 }
