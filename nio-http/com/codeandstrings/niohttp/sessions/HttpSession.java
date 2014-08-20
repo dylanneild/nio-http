@@ -1,4 +1,4 @@
-package com.codeandstrings.niohttp;
+package com.codeandstrings.niohttp.sessions;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -10,7 +10,6 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
 import com.codeandstrings.niohttp.exceptions.http.RequestEntityTooLargeException;
@@ -20,13 +19,13 @@ import com.codeandstrings.niohttp.request.RequestBodyFactory;
 import com.codeandstrings.niohttp.request.RequestHeaderFactory;
 import com.codeandstrings.niohttp.response.ResponseContent;
 
-class Session$Line {
+class HttpSession$Line {
 
     public final String line;
     public final int start;
     public final int nextStart;
 
-    public Session$Line(String line, int start, int nextStart) {
+    public HttpSession$Line(String line, int start, int nextStart) {
         this.line = line;
         this.start = start;
         this.nextStart = nextStart;
@@ -34,35 +33,17 @@ class Session$Line {
 
     @Override
     public String toString() {
-        return "Session$Line [line=" + line + ", start=" + start
+        return "HttpSession$Line [line=" + line + ", start=" + start
                 + ", nextStart=" + nextStart + "]";
     }
 
 }
 
-public class Session {
+public class HttpSession extends Session {
 
-    /*
-      Session ID Management
-     */
-    private static long lastSessionId = 0;
-    private long sessionId;
-    private long nextRequestId;
-
-    /*
-     * Our channel and selector
-     */
-    private SocketChannel channel;
-    private Selector selector;
-    private Parameters parameters;
-
-    /*
-     * Request acceptance data
-     */
-    private int maxRequestSize;
     private byte[] requestHeaderData;
     private int requestHeaderMarker;
-    private ArrayList<Session$Line> requestHeaderLines;
+    private ArrayList<HttpSession$Line> requestHeaderLines;
     private int lastHeaderByteLocation;
     private ByteBuffer readBuffer;
     private RequestHeaderFactory headerFactory;
@@ -86,20 +67,13 @@ public class Session {
      * @param channel  The TCP this session is operating against
      * @param selector The NIO selector this channel interacts with.
      */
-    public Session(SocketChannel channel, Selector selector, Parameters parameters) {
+    public HttpSession(SocketChannel channel, Selector selector, Parameters parameters) {
 
-        this.sessionId = Session.lastSessionId;
-        Session.lastSessionId++;
+        super(channel, selector, parameters);
 
-        this.nextRequestId = 0;
-
-        this.channel = channel;
-        this.selector = selector;
-        this.maxRequestSize = IdealBlockSize.VALUE;
         this.readBuffer = ByteBuffer.allocate(128);
         this.outputQueue = new ArrayList<ResponseContent>();
         this.requestQueue = new ArrayList<Request>();
-        this.parameters = parameters;
 
         this.reset();
     }
@@ -107,22 +81,12 @@ public class Session {
     public void reset() {
         this.requestHeaderData = new byte[maxRequestSize];
         this.requestHeaderMarker = 0;
-        this.requestHeaderLines = new ArrayList<Session$Line>();
+        this.requestHeaderLines = new ArrayList<HttpSession$Line>();
         this.lastHeaderByteLocation = 0;
         this.headerFactory = new RequestHeaderFactory();
         this.bodyReadBegun = false;
         this.bodyFactory = new RequestBodyFactory();
         this.readBuffer.clear();
-    }
-
-    public long getSessionId() {
-        return sessionId;
-    }
-
-    public long getNextRequestId() {
-        long r = this.nextRequestId;
-        this.nextRequestId++;
-        return r;
     }
 
     public void queueBuffer(ResponseContent container) throws IOException {
@@ -139,7 +103,7 @@ public class Session {
         InetSocketAddress remote = (InetSocketAddress) this.channel
                 .getRemoteAddress();
 
-        Request r = Request.generateRequest(this.sessionId, this.getNextRequestId(),
+        Request r = Request.generateRequest(this.getSessionId(), this.getNextRequestId(),
                 remote.getHostString(), remote.getPort(), headerFactory.build(),
                 bodyFactory.build(), this.parameters);
 
@@ -176,7 +140,7 @@ public class Session {
         this.headerFactory.reset();
 
         // walk the received header lines.
-        for (Session$Line sessionLine : this.requestHeaderLines) {
+        for (HttpSession$Line sessionLine : this.requestHeaderLines) {
 
             headerFactory.addLine(sessionLine.line);
 
@@ -235,7 +199,7 @@ public class Session {
                     line = new String(this.requestHeaderData, this.lastHeaderByteLocation, i - this.lastHeaderByteLocation - 1);
                 }
 
-                this.requestHeaderLines.add(new Session$Line(line, this.lastHeaderByteLocation, i + 1));
+                this.requestHeaderLines.add(new HttpSession$Line(line, this.lastHeaderByteLocation, i + 1));
                 this.lastHeaderByteLocation = (i + 1);
             }
 
