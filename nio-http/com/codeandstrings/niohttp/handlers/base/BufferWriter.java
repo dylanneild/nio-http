@@ -2,7 +2,9 @@ package com.codeandstrings.niohttp.handlers.base;
 
 import com.codeandstrings.niohttp.response.ResponseContent;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 import java.util.ArrayList;
@@ -12,7 +14,6 @@ public class BufferWriter {
     private Pipe.SinkChannel channel;
     private ArrayList<ResponseContent> queue;
     private ByteBuffer currentSizeBuffer;
-    private ByteBuffer currentHeaderBuffer;
     private ByteBuffer currentDataBuffer;
 
     public BufferWriter (Pipe.SinkChannel channel) {
@@ -31,21 +32,29 @@ public class BufferWriter {
 
         ResponseContent container = queue.remove(0);
 
-        this.currentHeaderBuffer = container.getHeaderAsByteBuffer();
-        this.currentSizeBuffer = ByteBuffer.allocate(Integer.SIZE / 8).putInt(currentHeaderBuffer.capacity());
-        this.currentDataBuffer = ByteBuffer.wrap(container.getBuffer());
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ObjectOutputStream oos = new ObjectOutputStream(baos)) {
 
-        this.currentHeaderBuffer.flip();
-        this.currentSizeBuffer.flip();
+            oos.writeObject(container);
+            oos.flush();
 
-        return true;
+            byte bytes[] = baos.toByteArray();
+
+            this.currentDataBuffer = ByteBuffer.wrap(bytes);
+            this.currentSizeBuffer = ByteBuffer.allocate(Integer.SIZE / 8).putInt(bytes.length);
+
+            this.currentSizeBuffer.flip();
+
+            return true;
+        }
+        catch (IOException e) {
+            throw e;
+        }
 
     }
 
     private boolean hasCurrentBuffer() {
         if (currentSizeBuffer != null)
-            return true;
-        else if (currentHeaderBuffer != null)
             return true;
         else if (currentDataBuffer != null)
             return true;
@@ -67,15 +76,6 @@ public class BufferWriter {
                 return true;
             } else {
                 this.currentSizeBuffer = null;
-            }
-        }
-
-        if (this.currentHeaderBuffer != null) {
-            this.channel.write(this.currentHeaderBuffer);
-            if (this.currentHeaderBuffer.hasRemaining()) {
-                return true;
-            } else {
-                this.currentHeaderBuffer = null;
             }
         }
 

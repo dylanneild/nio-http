@@ -8,14 +8,12 @@ public class ResponseContentHeader implements Externalizable {
     private long sessionId;
     private long requestId;
     private boolean lastBufferForRequest;
-    private int bufferSize;
 
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         this.sessionId = in.readLong();
         this.requestId = in.readLong();
         this.lastBufferForRequest = in.readBoolean();
-        this.bufferSize = in.readInt();
     }
 
     @Override
@@ -23,7 +21,6 @@ public class ResponseContentHeader implements Externalizable {
         out.writeLong(this.sessionId);
         out.writeLong(this.requestId);
         out.writeBoolean(this.lastBufferForRequest);
-        out.writeInt(this.bufferSize);
     }
 
     public ResponseContentHeader() {}
@@ -87,14 +84,6 @@ public class ResponseContentHeader implements Externalizable {
         this.lastBufferForRequest = lastBufferForRequest;
     }
 
-    public int getBufferSize() {
-        return bufferSize;
-    }
-
-    public void setBufferSize(int bufferSize) {
-        this.bufferSize = bufferSize;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -102,7 +91,6 @@ public class ResponseContentHeader implements Externalizable {
 
         ResponseContentHeader that = (ResponseContentHeader) o;
 
-        if (bufferSize != that.bufferSize) return false;
         if (lastBufferForRequest != that.lastBufferForRequest) return false;
         if (requestId != that.requestId) return false;
         if (sessionId != that.sessionId) return false;
@@ -115,7 +103,6 @@ public class ResponseContentHeader implements Externalizable {
         int result = (int) (sessionId ^ (sessionId >>> 32));
         result = 31 * result + (int) (requestId ^ (requestId >>> 32));
         result = 31 * result + (lastBufferForRequest ? 1 : 0);
-        result = 31 * result + bufferSize;
         return result;
     }
 
@@ -125,7 +112,6 @@ public class ResponseContentHeader implements Externalizable {
                 "sessionId=" + sessionId +
                 ", requestId=" + requestId +
                 ", lastBufferForRequest=" + lastBufferForRequest +
-                ", bufferSize=" + bufferSize +
                 '}';
     }
 }

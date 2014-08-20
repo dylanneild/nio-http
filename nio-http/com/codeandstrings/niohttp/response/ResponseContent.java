@@ -1,16 +1,52 @@
 package com.codeandstrings.niohttp.response;
 
+import java.io.Externalizable;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 
-public class ResponseContent {
+public class ResponseContent implements Externalizable {
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeObject(this.bufferHeader);
+
+        if (this.buffer == null) {
+            out.writeInt(-1);
+        } else {
+            out.writeInt(this.buffer.length);
+            out.write(this.buffer, 0, this.buffer.length);
+        }
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+
+        this.bufferHeader = (ResponseContentHeader)in.readObject();
+        int arraySize = in.readInt();
+
+        if (arraySize==-1) {
+            this.buffer = null;
+        } else {
+            this.buffer = new byte[arraySize];
+
+            int arrayReadLocation = 0;
+
+            while (true) {
+                int readBytes = in.read(this.buffer, arrayReadLocation, arraySize - arrayReadLocation);
+
+                if (arraySize - arrayReadLocation == 0) {
+                    break;
+                } else {
+                    arrayReadLocation = arrayReadLocation + readBytes;
+                }
+            }
+        }
+
+    }
 
     private ResponseContentHeader bufferHeader;
 	private byte[] buffer;
-
-//    private ByteBuffer chunkHeader;
-//    private ByteBuffer chunkFooter;
 
     public ResponseContent(long sessionId, long requestId, byte[] buffer, boolean lastBufferForRequest) {
         this.bufferHeader = new ResponseContentHeader(sessionId, requestId, lastBufferForRequest);
@@ -22,63 +58,11 @@ public class ResponseContent {
         this.buffer = buffer;
     }
 
-//    private byte[] getChunkHeader() {
-//        try {
-//            int size = this.buffer.remaining();
-//            byte s[] = Integer.toHexString(size).getBytes("ASCII");
-//            byte r[] = new byte[s.length + 2];
-//
-//            for (int i = 0; i < s.length; i++) {
-//                r[i] = s[i];
-//            }
-//
-//            r[r.length - 2] = 13;
-//            r[r.length - 1] = 10;
-//
-//            return r;
-//        } catch (Exception e) {
-//            return null;
-//        }
-//
-//    }
-//
-//    private byte[] getChunkFooter() {
-//
-//        if (this.isLastBufferForRequest()) {
-//            byte r[] = {13, 10, 48, 13, 10, 13, 10};
-//            return r;
-//        } else {
-//            byte r[] = {13, 10};
-//            return r;
-//        }
-//
-//    }
-//
-//    public void chunkBuffer() {
-//
-//        byte[] chunkHeader = getChunkHeader();
-//        byte[] chunkFooter = getChunkFooter();
-//
-//        ByteBuffer replacement = ByteBuffer.allocate(this.getBuffer().remaining() + chunkHeader.length + chunkFooter.length);
-//
-//        replacement.put(chunkHeader);
-//        replacement.put(this.buffer);
-//        replacement.put(chunkFooter);
-//
-//        replacement.flip();
-//
-//        this.buffer = replacement;
-//
-//    }
+    public ResponseContent() {}
 
     public byte[] getBuffer() {
 		return buffer;
 	}
-
-    public ByteBuffer getHeaderAsByteBuffer() throws IOException {
-        this.bufferHeader.setBufferSize(this.buffer.length);
-        return this.bufferHeader.getAsByteBuffer();
-    }
 
 	public void setBuffer(byte[] buffer) {
 		this.buffer = buffer;
