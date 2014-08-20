@@ -134,21 +134,21 @@ public class ResponseFactory {
 
     }
 
-	public static Response createResponse(String content, String contentType,
-			Request request) {
-
-        byte bytes[] = content.getBytes();
-		ByteBuffer contentBuffer = ByteBuffer.allocate(bytes.length);
-		contentBuffer.put(bytes);
-
-		contentBuffer.flip();
-
-        Response r = createResponse(contentType, bytes.length, request);
-		r.setBody(contentBuffer);
-
-		return r;
-
-	}
+//	public static Response createResponse(String content, String contentType,
+//			Request request) {
+//
+//        byte bytes[] = content.getBytes();
+//		ByteBuffer contentBuffer = ByteBuffer.allocate(bytes.length);
+//		contentBuffer.put(bytes);
+//
+//		contentBuffer.flip();
+//
+//        Response r = createResponse(contentType, bytes.length, request);
+//		r.setBody(contentBuffer);
+//
+//		return r;
+//
+//	}
 
 	public static Response createResponse(HttpException e, Parameters parameters) {
 		return (new ExceptionResponseFactory(e)).create(parameters);

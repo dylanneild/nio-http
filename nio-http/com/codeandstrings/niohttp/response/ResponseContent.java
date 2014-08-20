@@ -1,6 +1,7 @@
 package com.codeandstrings.niohttp.response;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
 public class ResponseContent {

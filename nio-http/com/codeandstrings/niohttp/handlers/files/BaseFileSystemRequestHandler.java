@@ -7,10 +7,7 @@ import com.codeandstrings.niohttp.enums.RequestMethod;
 import com.codeandstrings.niohttp.exceptions.http.*;
 import com.codeandstrings.niohttp.handlers.base.RequestHandler;
 import com.codeandstrings.niohttp.request.Request;
-import com.codeandstrings.niohttp.response.ResponseContent;
-import com.codeandstrings.niohttp.response.ExceptionResponseFactory;
-import com.codeandstrings.niohttp.response.Response;
-import com.codeandstrings.niohttp.response.ResponseFactory;
+import com.codeandstrings.niohttp.response.*;
 
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -105,7 +102,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
     }
 
-    private void serviceDirectoryRequest(Path path, Request request, Selector selector) throws IOException {
+    private void serviceDirectoryRequest(Path path, Request request, Selector selector) throws Exception {
 
         StringBuilder html = new StringBuilder();
 
@@ -128,9 +125,11 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
         html.append(this.getDirectoryFooter(request));
 
-        Response response = ResponseFactory.createResponse(html.toString(), "text/html", request);
-        ResponseContent responseHeader = new ResponseContent(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), true);
-        this.sendBufferContainer(responseHeader);
+        StringResponseFactory factory = new StringResponseFactory(request, "text/html", html.toString());
+
+        this.sendBufferContainer(factory.getHeader());
+        this.sendBufferContainer(factory.getBody());
+
         this.scheduleWrites(selector);
 
     }
@@ -145,7 +144,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
     }
 
-    private final void serviceFileRequest(Path path, Request request, Selector selector) throws IOException {
+    private final void serviceFileRequest(Path path, Request request, Selector selector) throws Exception {
 
         // we handle directories differently
         if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {

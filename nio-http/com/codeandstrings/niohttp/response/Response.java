@@ -1,6 +1,6 @@
 package com.codeandstrings.niohttp.response;
 
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.nio.ByteBuffer;
 
 import com.codeandstrings.niohttp.data.HeaderValues;
@@ -9,7 +9,7 @@ import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
 
-public class Response {
+public class Response implements Externalizable {
 
 	private HttpProtocol protocol;
 	private RequestMethod method;
@@ -17,7 +17,20 @@ public class Response {
 	private int code;
 	private String description;
 	private HeaderValues headers;
-	private ByteBuffer body;
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeInt(this.code);
+        out.writeObject(this.description);
+        out.writeObject(this.headers);
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+
+    }
+
+    public Response() {}
 
 	public Response(HttpProtocol protocol, RequestMethod method) {
 		this.protocol = protocol;
@@ -59,26 +72,14 @@ public class Response {
 		headers.addHeader(name, value);
 	}
 
-	public void setBody(ByteBuffer body) {
-		this.body = body;
-	}
-
-	@Override
-	public String toString() {
-		return "Response [protocol=" + protocol + ", method=" + method
-				+ ", code=" + code + ", description=" + description
-				+ ", headers=" + headers + ", body=" + body + "]";
-	}
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Response)) return false;
+        if (o == null || getClass() != o.getClass()) return false;
 
         Response response = (Response) o;
 
         if (code != response.code) return false;
-        if (body != null ? !body.equals(response.body) : response.body != null) return false;
         if (description != null ? !description.equals(response.description) : response.description != null)
             return false;
         if (headers != null ? !headers.equals(response.headers) : response.headers != null) return false;
@@ -95,8 +96,18 @@ public class Response {
         result = 31 * result + code;
         result = 31 * result + (description != null ? description.hashCode() : 0);
         result = 31 * result + (headers != null ? headers.hashCode() : 0);
-        result = 31 * result + (body != null ? body.hashCode() : 0);
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "Response{" +
+                "protocol=" + protocol +
+                ", method=" + method +
+                ", code=" + code +
+                ", description='" + description + '\'' +
+                ", headers=" + headers +
+                '}';
     }
 
     public int getCode() {
@@ -143,17 +154,6 @@ public class Response {
 
 			buffer.put(bytes);
 
-		}
-
-		// should we be sending a body?
-		boolean responseBodyNeeded = true;
-
-		if (this.method == RequestMethod.HEAD) {
-			responseBodyNeeded = false;
-		}
-
-		if (responseBodyNeeded && this.body != null) {
-			buffer.put(this.body);
 		}
 
 		buffer.flip();
