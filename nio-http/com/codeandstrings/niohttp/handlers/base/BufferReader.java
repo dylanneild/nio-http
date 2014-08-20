@@ -180,7 +180,10 @@ public class BufferReader {
             return null;
         }
 
-        ResponseContent r = new ResponseContent(header, this.currentBuffer);
+        byte content[] = new byte[this.currentBuffer.remaining()];
+        this.currentBuffer.get(content);
+
+        ResponseContent r = new ResponseContent(header, content);
 
         this.reset();
 

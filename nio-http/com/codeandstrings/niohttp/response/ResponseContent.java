@@ -7,16 +7,17 @@ import java.nio.ByteBuffer;
 public class ResponseContent {
 
     private ResponseContentHeader bufferHeader;
-	private ByteBuffer buffer;
+	private byte[] buffer;
+
 //    private ByteBuffer chunkHeader;
 //    private ByteBuffer chunkFooter;
 
-    public ResponseContent(long sessionId, long requestId, ByteBuffer buffer, boolean lastBufferForRequest) {
+    public ResponseContent(long sessionId, long requestId, byte[] buffer, boolean lastBufferForRequest) {
         this.bufferHeader = new ResponseContentHeader(sessionId, requestId, lastBufferForRequest);
         this.buffer = buffer;
     }
 
-    public ResponseContent(ResponseContentHeader bufferHeader, ByteBuffer buffer) {
+    public ResponseContent(ResponseContentHeader bufferHeader, byte[] buffer) {
         this.bufferHeader = bufferHeader;
         this.buffer = buffer;
     }
@@ -70,16 +71,16 @@ public class ResponseContent {
 //
 //    }
 
-    public ByteBuffer getBuffer() {
+    public byte[] getBuffer() {
 		return buffer;
 	}
 
     public ByteBuffer getHeaderAsByteBuffer() throws IOException {
-        this.bufferHeader.setBufferSize(this.buffer.remaining());
+        this.bufferHeader.setBufferSize(this.buffer.length);
         return this.bufferHeader.getAsByteBuffer();
     }
 
-	public void setBuffer(ByteBuffer buffer) {
+	public void setBuffer(byte[] buffer) {
 		this.buffer = buffer;
 	}
 

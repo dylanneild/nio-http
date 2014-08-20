@@ -231,9 +231,13 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
                 this.tasks.add(task);
             }
 
+            // copy the captured buffer into a byte array
+            byte content[] = new byte[nextBuffer.remaining()];
+            nextBuffer.get(content);
+
             // we have a buffer to send and we know it
             ResponseContent responseContent = new ResponseContent(task.getSessionId(),
-                    task.getRequestId(), nextBuffer, finalBuffer);
+                    task.getRequestId(), content, finalBuffer);
 
             this.sendBufferContainer(responseContent);
 

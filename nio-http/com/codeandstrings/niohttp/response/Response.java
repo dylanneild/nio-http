@@ -5,7 +5,6 @@ import java.nio.ByteBuffer;
 
 import com.codeandstrings.niohttp.data.HeaderValues;
 import com.codeandstrings.niohttp.data.IdealBlockSize;
-import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
 
@@ -27,7 +26,9 @@ public class Response implements Externalizable {
 
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-
+        this.code = in.readInt();
+        this.description = (String)in.readObject();
+        this.headers = (HeaderValues)in.readObject();
     }
 
     public Response() {}
@@ -126,9 +127,7 @@ public class Response implements Externalizable {
 		this.description = description;
 	}
 
-	public ByteBuffer getByteBuffer() {
-
-		ByteBuffer buffer = ByteBuffer.allocate(IdealBlockSize.VALUE);
+	public byte[] getByteBuffer() {
 
 		if (this.protocol != HttpProtocol.HTTP0_9) {
 
@@ -152,13 +151,12 @@ public class Response implements Externalizable {
 				return null;
 			}
 
-			buffer.put(bytes);
+            return bytes;
 
 		}
-
-		buffer.flip();
-
-		return buffer;
+        else {
+            return null;
+        }
 
 	}
 

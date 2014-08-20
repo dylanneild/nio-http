@@ -33,7 +33,7 @@ public class BufferWriter {
 
         this.currentHeaderBuffer = container.getHeaderAsByteBuffer();
         this.currentSizeBuffer = ByteBuffer.allocate(Integer.SIZE / 8).putInt(currentHeaderBuffer.capacity());
-        this.currentDataBuffer = container.getBuffer();
+        this.currentDataBuffer = ByteBuffer.wrap(container.getBuffer());
 
         this.currentHeaderBuffer.flip();
         this.currentSizeBuffer.flip();

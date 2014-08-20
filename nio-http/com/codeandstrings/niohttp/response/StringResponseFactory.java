@@ -24,19 +24,18 @@ public class StringResponseFactory {
 
     private void fabricateHeader() {
 
-        Response r = ResponseFactory.createResponse(this.contentType, this.body.getBuffer().remaining(), this.request);
-        this.header = new ResponseContent(this.request.getSessionId(), this.request.getRequestId(), r.getByteBuffer(), false);
+        Response r = ResponseFactory.createResponse(this.contentType, this.body.getBuffer().length, this.request);
+
+        if (r.getByteBuffer() != null) {
+            this.header = new ResponseContent(this.request.getSessionId(), this.request.getRequestId(), r.getByteBuffer(), false);
+        }
 
     }
 
     private void fabricateBody() {
 
         byte bytes[] = this.response.getBytes(Charset.forName("UTF-8"));
-        ByteBuffer bodyBuffer = ByteBuffer.allocate(bytes.length).put(bytes);
-
-        bodyBuffer.flip();
-
-        this.body = new ResponseContent(this.request.getSessionId(), this.request.getRequestId(), bodyBuffer, true);
+        this.body = new ResponseContent(this.request.getSessionId(), this.request.getRequestId(), bytes, true);
 
     }
 
