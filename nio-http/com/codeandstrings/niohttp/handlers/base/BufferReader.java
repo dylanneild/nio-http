@@ -150,7 +150,7 @@ public class BufferReader {
     }
 
     private ResponseContentHeader getContainerHeader() throws IOException, ClassNotFoundException {
- 
+
     	ByteArrayInputStream bais = new ByteArrayInputStream(currentHeaderBuffer.array());
         ObjectInputStream ois = new ObjectInputStream(bais);
 

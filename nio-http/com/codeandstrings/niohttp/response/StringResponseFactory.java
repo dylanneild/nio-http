@@ -32,7 +32,9 @@ public class StringResponseFactory {
     private void fabricateBody() {
 
         byte bytes[] = this.response.getBytes(Charset.forName("UTF-8"));
-        ByteBuffer bodyBuffer = ByteBuffer.allocateDirect(bytes.length).wrap(bytes);
+        ByteBuffer bodyBuffer = ByteBuffer.allocate(bytes.length).put(bytes);
+
+        bodyBuffer.flip();
 
         this.body = new ResponseContent(this.request.getSessionId(), this.request.getRequestId(), bodyBuffer, true);
 
