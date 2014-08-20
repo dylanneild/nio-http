@@ -19,6 +19,8 @@ public class Response implements Externalizable {
 
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeObject(this.protocol);
+        out.writeObject(this.method);
         out.writeInt(this.code);
         out.writeObject(this.description);
         out.writeObject(this.headers);
@@ -26,6 +28,8 @@ public class Response implements Externalizable {
 
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        this.protocol = (HttpProtocol)in.readObject();
+        this.method = (RequestMethod)in.readObject();
         this.code = in.readInt();
         this.description = (String)in.readObject();
         this.headers = (HeaderValues)in.readObject();
