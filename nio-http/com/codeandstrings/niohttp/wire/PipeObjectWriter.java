@@ -1,7 +1,5 @@
 package com.codeandstrings.niohttp.wire;
 
-import com.codeandstrings.niohttp.response.ResponseContent;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -9,23 +7,23 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 import java.util.ArrayList;
 
-public class ResponseContentWriter {
+public class PipeObjectWriter {
 
     private Pipe.SinkChannel channel;
-    private ArrayList<ResponseContent> queue;
     private ByteBuffer currentSizeBuffer;
-    private ByteBuffer currentDataBuffer;
+    private ByteBuffer currentObjectBuffer;
+    private ArrayList<Object> queue;
 
-    public ResponseContentWriter(Pipe.SinkChannel channel) {
+    public PipeObjectWriter(Pipe.SinkChannel channel) {
         this.channel = channel;
-        this.queue = new ArrayList<ResponseContent>();
+        this.queue = new ArrayList<Object>();
     }
 
-    public void sendBufferContainer(ResponseContent r) {
+    public void sendObject(Object r) {
         this.queue.add(r);
     }
 
-    private boolean queueNextBuffer() throws IOException {
+    private boolean queueNextObject() throws IOException {
 
         if (queue.size() == 0)
             return false;
@@ -37,7 +35,7 @@ public class ResponseContentWriter {
             oos.flush();
 
             this.currentSizeBuffer = ByteBuffer.allocate(Integer.SIZE / 8).putInt(baos.size());
-            this.currentDataBuffer = ByteBuffer.wrap(baos.toByteArray());
+            this.currentObjectBuffer = ByteBuffer.wrap(baos.toByteArray());
 
             this.currentSizeBuffer.flip();
 
@@ -49,19 +47,19 @@ public class ResponseContentWriter {
 
     }
 
-    private boolean hasCurrentBuffer() {
+    private boolean hasCurrentObject() {
         if (currentSizeBuffer != null)
             return true;
-        else if (currentDataBuffer != null)
+        else if (currentObjectBuffer != null)
             return true;
         else
             return false;
     }
 
-    public boolean executeBufferWriteEvent() throws IOException {
+    public boolean executeObjectWriteEvent() throws IOException {
 
-        if (!hasCurrentBuffer()) {
-            if (!queueNextBuffer()) {
+        if (!hasCurrentObject()) {
+            if (!queueNextObject()) {
                 return false;
             }
         }
@@ -75,14 +73,15 @@ public class ResponseContentWriter {
             }
         }
 
-        if (this.currentDataBuffer != null) {
-            this.channel.write(this.currentDataBuffer);
-            if (this.currentDataBuffer.hasRemaining()) {
+        if (this.currentObjectBuffer != null) {
+            this.channel.write(this.currentObjectBuffer);
+            if (this.currentObjectBuffer.hasRemaining()) {
                 return true;
             } else {
-                this.currentDataBuffer = null;
+                this.currentObjectBuffer = null;
             }
         }
+
 
         return queue.size() > 0;
 

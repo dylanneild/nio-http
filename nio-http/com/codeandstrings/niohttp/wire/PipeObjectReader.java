@@ -8,27 +8,27 @@ import java.io.ObjectInputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 
-public class RequestReader {
+public class PipeObjectReader {
 
     private Pipe.SourceChannel channel;
     private ByteBuffer currentSizeBuffer;
-    private ByteBuffer currentRequestBuffer;
+    private ByteBuffer currentObjectBuffer;
     private boolean currentSizeDone;
-    private boolean currentRequestDone;
+    private boolean currentObjectDone;
 
     private void reset() {
         this.currentSizeBuffer = null;
-        this.currentRequestBuffer = null;
+        this.currentObjectBuffer = null;
         this.currentSizeDone = false;
-        this.currentRequestDone = false;
+        this.currentObjectDone = false;
     }
 
-    public RequestReader(Pipe.SourceChannel channel) {
+    public PipeObjectReader(Pipe.SourceChannel channel) {
         this.channel = channel;
         this.reset();
     }
 
-    private boolean executeRequestReadRequestSize() throws IOException {
+    private boolean executeReadSize() throws IOException {
 
         // read the size buffer
         if (!this.currentSizeDone) {
@@ -66,49 +66,48 @@ public class RequestReader {
 
     }
 
-    private boolean executeRequestReadRequest(int size) throws IOException {
+    private boolean executeReadObject(int size) throws IOException {
 
         // read the request buffer
-        if (!this.currentRequestDone) {
-            if (this.currentRequestBuffer == null) {
+        if (!this.currentObjectDone) {
+            if (this.currentObjectBuffer == null) {
 
-                this.currentRequestBuffer = ByteBuffer.allocate(size);
-                this.channel.read(this.currentRequestBuffer);
+                this.currentObjectBuffer = ByteBuffer.allocate(size);
+                this.channel.read(this.currentObjectBuffer);
 
-                if (this.currentRequestBuffer.hasRemaining()) {
+                if (this.currentObjectBuffer.hasRemaining()) {
                     return false;
                 } else {
-                    this.currentRequestBuffer.flip();
-                    this.currentRequestDone = true;
+                    this.currentObjectBuffer.flip();
+                    this.currentObjectDone = true;
                     return true;
                 }
 
-            } else if (this.currentRequestBuffer.hasRemaining()) {
+            } else if (this.currentObjectBuffer.hasRemaining()) {
 
-                this.channel.read(this.currentRequestBuffer);
+                this.channel.read(this.currentObjectBuffer);
 
-                if (this.currentRequestBuffer.hasRemaining()) {
+                if (this.currentObjectBuffer.hasRemaining()) {
                     return false;
                 } else {
-                    this.currentRequestBuffer.flip();
-                    this.currentRequestDone = true;
+                    this.currentObjectBuffer.flip();
+                    this.currentObjectDone = true;
                     return true;
                 }
 
             }
         }
 
-        this.currentRequestBuffer.rewind();
+        this.currentObjectBuffer.rewind();
 
         return true;
 
     }
 
-    private Request getRequest() throws IOException, ClassNotFoundException {
-        try (ByteArrayInputStream bais = new ByteArrayInputStream(currentRequestBuffer.array());
+    private Object getObject() throws IOException, ClassNotFoundException {
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(currentObjectBuffer.array());
              ObjectInputStream ois = new ObjectInputStream(bais)) {
-
-            return (Request)ois.readObject();
+            return ois.readObject();
         }
         catch (IOException e) {
             throw e;
@@ -118,30 +117,19 @@ public class RequestReader {
         }
     }
 
-    /**
-     * <p>Read a Request object form the handler channel.</p>
-     *
-     * <p>This will either return a Request object or null. If null is returned it means that the full
-     * request object could not be read from the channel. This method should then be called again on the
-     * next OP_READ selector event in order to attempt to read the remainder of the request.</p>
-     *
-     * @return A Request object, or null
-     * @throws IOException On an IO Error
-     * @throws ClassNotFoundException If there is a class cast issue
-     */
-    public Request readRequestFromChannel() throws IOException, ClassNotFoundException {
+    public Object readObjectFromChannel() throws IOException, ClassNotFoundException {
 
-        if (!executeRequestReadRequestSize()) {
+        if (!executeReadSize()) {
             return null;
         }
 
         int requestBufferSize = this.currentSizeBuffer.getInt();
 
-        if (!executeRequestReadRequest(requestBufferSize)) {
+        if (!executeReadObject(requestBufferSize)) {
             return null;
         }
 
-        Request r = getRequest();
+        Object r = getObject();
 
         this.reset();
 
