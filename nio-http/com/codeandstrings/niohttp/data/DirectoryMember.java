@@ -6,11 +6,9 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Map;
 
-public class DirectoryMembers {
+public class DirectoryMember {
 
     private long size;
     private String name;
@@ -48,7 +46,7 @@ public class DirectoryMembers {
         return date;
     }
 
-    public DirectoryMembers(Path file, String mimeType) throws IOException, ParseException {
+    public DirectoryMember(Path file, String mimeType) throws IOException, ParseException {
 
         this.size = Files.size(file);
         this.name = file.getFileName().toString();
@@ -65,7 +63,7 @@ public class DirectoryMembers {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        DirectoryMembers that = (DirectoryMembers) o;
+        DirectoryMember that = (DirectoryMember) o;
 
         if (directory != that.directory) return false;
         if (file != that.file) return false;

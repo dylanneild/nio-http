@@ -20,11 +20,8 @@ public class ExceptionResponseFactory {
 
 		r.setCode(this.e.getCode());
 		r.setDescription(this.e.getDescription());
-
-        if (parameters != null) {
-            r.addHeader("Server", parameters.getServerString());
-        }
-
+        r.addHeader("Server", parameters.getServerString());
+        r.addHeader("Vary", "Accept-Encoding");
 		r.addHeader("Content-Length", "0");
 		r.addHeader("Connecton", "close");
 

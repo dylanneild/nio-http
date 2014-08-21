@@ -1,15 +1,14 @@
 package com.codeandstrings.niohttp.response;
 
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.nio.ByteBuffer;
 
 import com.codeandstrings.niohttp.data.HeaderValues;
 import com.codeandstrings.niohttp.data.IdealBlockSize;
-import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
 
-public class Response {
+public class Response implements Externalizable {
 
 	private HttpProtocol protocol;
 	private RequestMethod method;
@@ -17,41 +16,75 @@ public class Response {
 	private int code;
 	private String description;
 	private HeaderValues headers;
-	private ByteBuffer body;
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeObject(this.protocol);
+        out.writeObject(this.method);
+        out.writeInt(this.code);
+        out.writeObject(this.description);
+        out.writeObject(this.headers);
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        this.protocol = (HttpProtocol)in.readObject();
+        this.method = (RequestMethod)in.readObject();
+        this.code = in.readInt();
+        this.description = (String)in.readObject();
+        this.headers = (HeaderValues)in.readObject();
+    }
+
+    public Response() {}
 
 	public Response(HttpProtocol protocol, RequestMethod method) {
 		this.protocol = protocol;
 		this.method = method;
 		this.headers = new HeaderValues(true);
 	}
-     public void removeHeader(String name) {
+
+    public void removeHeader(String name) {
         headers.removeHeader(name);
     }
 
+    public boolean isChunkedTransfer() {
+        String te = headers.getSingleValueCaseInsensitive("transfer-encoding");
+
+        if (te != null && te.equalsIgnoreCase("chunked")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public String getHeaderCaseInsensitive(String header) {
+        return this.headers.getSingleValueCaseInsensitive(header);
+    }
+
 	public void addHeader(String name, String value) {
+
+        if (name != null && name.equalsIgnoreCase("transfer-encoding") && value != null && value.equalsIgnoreCase("chunked")) {
+            // remove content-length if this reponse is transfer-encoding: chunked;
+            // these are mutually exclusive
+            headers.removeHeader("content-length");
+        } else if (name != null && name.equalsIgnoreCase("content-length")) {
+            // likewise, if we'ere getting a content-length past make sure no transfer-encoding: chunked exists
+            if (this.isChunkedTransfer()) {
+                headers.removeHeader("transfer-encoding");
+            }
+        }
+
 		headers.addHeader(name, value);
-	}
-
-	public void setBody(ByteBuffer body) {
-		this.body = body;
-	}
-
-	@Override
-	public String toString() {
-		return "Response [protocol=" + protocol + ", method=" + method
-				+ ", code=" + code + ", description=" + description
-				+ ", headers=" + headers + ", body=" + body + "]";
 	}
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Response)) return false;
+        if (o == null || getClass() != o.getClass()) return false;
 
         Response response = (Response) o;
 
         if (code != response.code) return false;
-        if (body != null ? !body.equals(response.body) : response.body != null) return false;
         if (description != null ? !description.equals(response.description) : response.description != null)
             return false;
         if (headers != null ? !headers.equals(response.headers) : response.headers != null) return false;
@@ -68,8 +101,18 @@ public class Response {
         result = 31 * result + code;
         result = 31 * result + (description != null ? description.hashCode() : 0);
         result = 31 * result + (headers != null ? headers.hashCode() : 0);
-        result = 31 * result + (body != null ? body.hashCode() : 0);
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "Response{" +
+                "protocol=" + protocol +
+                ", method=" + method +
+                ", code=" + code +
+                ", description='" + description + '\'' +
+                ", headers=" + headers +
+                '}';
     }
 
     public int getCode() {
@@ -88,9 +131,7 @@ public class Response {
 		this.description = description;
 	}
 
-	public ByteBuffer getByteBuffer() {
-
-		ByteBuffer buffer = ByteBuffer.allocate(IdealBlockSize.VALUE);
+	public byte[] getByteBuffer() {
 
 		if (this.protocol != HttpProtocol.HTTP0_9) {
 
@@ -114,24 +155,12 @@ public class Response {
 				return null;
 			}
 
-			buffer.put(bytes);
+            return bytes;
 
 		}
-
-		// should we be sending a body?
-		boolean responseBodyNeeded = true;
-
-		if (this.method == RequestMethod.HEAD) {
-			responseBodyNeeded = false;
-		}
-
-		if (responseBodyNeeded && this.body != null) {
-			buffer.put(this.body);
-		}
-
-		buffer.flip();
-
-		return buffer;
+        else {
+            return null;
+        }
 
 	}
 

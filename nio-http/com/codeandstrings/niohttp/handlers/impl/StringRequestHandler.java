@@ -1,10 +1,11 @@
 package com.codeandstrings.niohttp.handlers.impl;
 
-import com.codeandstrings.niohttp.handlers.RequestHandler;
+import com.codeandstrings.niohttp.handlers.base.RequestHandler;
 import com.codeandstrings.niohttp.request.Request;
-import com.codeandstrings.niohttp.response.BufferContainer;
+import com.codeandstrings.niohttp.response.ResponseContent;
 import com.codeandstrings.niohttp.response.Response;
 import com.codeandstrings.niohttp.response.ResponseFactory;
+import com.codeandstrings.niohttp.response.StringResponseFactory;
 
 import java.nio.channels.Pipe;
 import java.nio.channels.SelectableChannel;
@@ -43,13 +44,12 @@ public abstract class StringRequestHandler extends RequestHandler {
 
                         if (request != null) {
 
-                            Response response = ResponseFactory.createResponse(this.handleRequest(request),
-                                    this.getContentType(), request);
+                            String responseText = this.handleRequest(request);
+                            StringResponseFactory factory = new StringResponseFactory(request, this.getContentType(), responseText);
 
-                            BufferContainer container = new BufferContainer(request.getSessionId(),
-                                    request.getRequestId(), response.getByteBuffer(), 0, true);
+                            this.sendBufferContainer(factory.getHeader());
+                            this.sendBufferContainer(factory.getBody());
 
-                            this.sendBufferContainer(container);
                             this.getHandlerWriteChannel().register(selector, SelectionKey.OP_WRITE);
                         }
 

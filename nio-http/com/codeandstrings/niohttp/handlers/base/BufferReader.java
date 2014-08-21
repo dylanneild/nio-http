@@ -1,7 +1,7 @@
-package com.codeandstrings.niohttp.handlers;
+package com.codeandstrings.niohttp.handlers.base;
 
-import com.codeandstrings.niohttp.response.BufferContainer;
-import com.codeandstrings.niohttp.response.BufferContainerHeader;
+import com.codeandstrings.niohttp.response.ResponseContent;
+import com.codeandstrings.niohttp.response.ResponseContentHeader;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -14,19 +14,15 @@ public class BufferReader {
     private Pipe.SourceChannel channel;
 
     private ByteBuffer currentSizeBuffer;
-    private ByteBuffer currentHeaderBuffer;
     private ByteBuffer currentBuffer;
 
     private boolean currentSizeDone;
-    private boolean currentHeaderDone;
     private boolean currentBufferDone;
 
     private void reset() {
         this.currentSizeBuffer = null;
-        this.currentHeaderBuffer = null;
         this.currentBuffer = null;
         this.currentSizeDone = false;
-        this.currentHeaderDone = false;
         this.currentBufferDone = false;
     }
     
@@ -73,44 +69,6 @@ public class BufferReader {
 
     }
 
-    private boolean executeBufferReadHeader(int size) throws IOException {
-
-        // read the request buffer
-        if (!this.currentHeaderDone) {
-            if (this.currentHeaderBuffer == null) {
-
-                this.currentHeaderBuffer = ByteBuffer.allocate(size);
-                this.channel.read(this.currentHeaderBuffer);
-
-                if (this.currentHeaderBuffer.hasRemaining()) {
-                    return false;
-                } else {
-                    this.currentHeaderBuffer.flip();
-                    this.currentHeaderDone = true;
-                    return true;
-                }
-
-            } else if (this.currentHeaderBuffer.hasRemaining()) {
-
-                this.channel.read(this.currentHeaderBuffer);
-
-                if (this.currentHeaderBuffer.hasRemaining()) {
-                    return false;
-                } else {
-                    this.currentHeaderBuffer.flip();
-                    this.currentHeaderDone = true;
-                    return true;
-                }
-
-            }
-        }
-
-        this.currentHeaderBuffer.rewind();
-
-        return true;
-
-    }
-
     private boolean executeBufferRead(int size) throws IOException {
 
         // read the actual buffer
@@ -149,20 +107,20 @@ public class BufferReader {
 
     }
 
-    private BufferContainerHeader getContainerHeader() throws IOException, ClassNotFoundException {
- 
-    	ByteArrayInputStream bais = new ByteArrayInputStream(currentHeaderBuffer.array());
+    private ResponseContent getContainer() throws IOException, ClassNotFoundException {
+
+        ByteArrayInputStream bais = new ByteArrayInputStream(currentBuffer.array());
         ObjectInputStream ois = new ObjectInputStream(bais);
 
-        BufferContainerHeader header = (BufferContainerHeader)ois.readObject();
+        ResponseContent container = (ResponseContent)ois.readObject();
 
         ois.close();
-        
-        return header;
-          
+
+        return container;
+
     }
     
-    public BufferContainer readBufferFromChannel() throws IOException, ClassNotFoundException {
+    public ResponseContent readBufferFromChannel() throws IOException, ClassNotFoundException {
 
         if (!executeBufferReadSize()) {
             return null;
@@ -170,17 +128,11 @@ public class BufferReader {
 
         int requestBufferSize = this.currentSizeBuffer.getInt();
 
-        if (!executeBufferReadHeader(requestBufferSize)) {
+        if (!executeBufferRead(requestBufferSize)) {
             return null;
         }
 
-        BufferContainerHeader header = getContainerHeader();
-
-        if (!executeBufferRead(header.getBufferSize())) {
-            return null;
-        }
-
-        BufferContainer r = new BufferContainer(header, this.currentBuffer);
+        ResponseContent r = this.getContainer();
 
         this.reset();
 

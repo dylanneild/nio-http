@@ -11,24 +11,25 @@ import com.codeandstrings.niohttp.exceptions.InvalidHandlerException;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
 import com.codeandstrings.niohttp.exceptions.http.NotFoundException;
 import com.codeandstrings.niohttp.exceptions.tcp.CloseConnectionException;
-import com.codeandstrings.niohttp.handlers.RequestHandler;
-import com.codeandstrings.niohttp.handlers.RequestHandlerBroker;
+import com.codeandstrings.niohttp.handlers.base.RequestHandler;
+import com.codeandstrings.niohttp.handlers.broker.RequestHandlerBroker;
 import com.codeandstrings.niohttp.request.Request;
-import com.codeandstrings.niohttp.response.BufferContainer;
+import com.codeandstrings.niohttp.response.ResponseContent;
 import com.codeandstrings.niohttp.response.ExceptionResponseFactory;
 import com.codeandstrings.niohttp.response.Response;
+import com.codeandstrings.niohttp.sessions.HttpSession;
 
 public class Server implements Runnable {
 
 	private Parameters parameters;
 	private InetSocketAddress socketAddress;
 	private ServerSocketChannel serverSocketChannel;
-    private HashMap<Long,Session> sessions;
+    private HashMap<Long,HttpSession> sessions;
     private RequestHandlerBroker requestHandlerBroker;
 
 	public Server() {
 		this.parameters = Parameters.getDefaultParameters();
-        this.sessions = new HashMap<Long,Session>();
+        this.sessions = new HashMap<Long,HttpSession>();
         this.requestHandlerBroker = new RequestHandlerBroker();
         Thread.currentThread().setName("NIO-HTTP Selection Thread");
 	}
@@ -100,7 +101,7 @@ public class Server implements Runnable {
 
 						if (channel instanceof SocketChannel) {
 
-                            Session session = (Session) key.attachment();
+                            HttpSession session = (HttpSession) key.attachment();
 
                             if (session == null) {
 								/*
@@ -110,7 +111,7 @@ public class Server implements Runnable {
 								 * Make a new one and ask it to handle the
 								 * session.
 								 */
-								session = new Session((SocketChannel) channel,
+								session = new HttpSession((SocketChannel) channel,
 										selector, this.parameters);
 
                                 this.sessions.put(session.getSessionId(), session);
@@ -147,8 +148,8 @@ public class Server implements Runnable {
 
                                 Response r = (new ExceptionResponseFactory(e)).create(this.parameters);
 
-                                BufferContainer container = new BufferContainer(session.getSessionId(),
-                                        -1, r.getByteBuffer(), 0, true);
+                                ResponseContent container = new ResponseContent(session.getSessionId(),
+                                        -1, r.getByteBuffer(), true);
 
                                 session.queueBuffer(container);
 
@@ -164,10 +165,10 @@ public class Server implements Runnable {
                                 key.attach(requestHandler);
                             }
 
-                            BufferContainer container = (BufferContainer)requestHandler.executeBufferReadEvent();
+                            ResponseContent container = requestHandler.executeBufferReadEvent();
 
                             if (container != null) {
-                                Session session = this.sessions.get(container.getSessionId());
+                                HttpSession session = this.sessions.get(container.getSessionId());
 
                                 if (session != null) {
                                     session.queueBuffer(container);
@@ -183,7 +184,7 @@ public class Server implements Runnable {
 
                         if (channel instanceof SocketChannel) {
 
-                            Session session = (Session) key.attachment();
+                            HttpSession session = (HttpSession) key.attachment();
 
                             // TODO: I assume this channel attachment will be dead on a second request
                             // TODO: as resolving a socket to a session may not be possible once it's disassociated

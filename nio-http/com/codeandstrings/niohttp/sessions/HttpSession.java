@@ -1,4 +1,4 @@
-package com.codeandstrings.niohttp;
+package com.codeandstrings.niohttp.sessions;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -8,8 +8,8 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
+import java.util.Iterator;
 
-import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
 import com.codeandstrings.niohttp.exceptions.http.RequestEntityTooLargeException;
@@ -17,15 +17,15 @@ import com.codeandstrings.niohttp.exceptions.tcp.CloseConnectionException;
 import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.request.RequestBodyFactory;
 import com.codeandstrings.niohttp.request.RequestHeaderFactory;
-import com.codeandstrings.niohttp.response.BufferContainer;
+import com.codeandstrings.niohttp.response.ResponseContent;
 
-class Session$Line {
+class HttpSession$Line {
 
     public final String line;
     public final int start;
     public final int nextStart;
 
-    public Session$Line(String line, int start, int nextStart) {
+    public HttpSession$Line(String line, int start, int nextStart) {
         this.line = line;
         this.start = start;
         this.nextStart = nextStart;
@@ -33,46 +33,33 @@ class Session$Line {
 
     @Override
     public String toString() {
-        return "Session$Line [line=" + line + ", start=" + start
+        return "HttpSession$Line [line=" + line + ", start=" + start
                 + ", nextStart=" + nextStart + "]";
     }
 
 }
 
-public class Session {
+public class HttpSession extends Session {
 
-    /*
-      Session ID Management
-     */
-    private static long lastSessionId = 0;
-    private long sessionId;
-    private long nextRequestId;
-
-    /*
-     * Our channel and selector
-     */
-    private SocketChannel channel;
-    private Selector selector;
-    private Parameters parameters;
-
-    /*
-     * Request acceptance data
-     */
-    private int maxRequestSize;
     private byte[] requestHeaderData;
     private int requestHeaderMarker;
-    private ArrayList<Session$Line> requestHeaderLines;
+    private ArrayList<HttpSession$Line> requestHeaderLines;
     private int lastHeaderByteLocation;
     private ByteBuffer readBuffer;
     private RequestHeaderFactory headerFactory;
     private boolean bodyReadBegun;
     private RequestBodyFactory bodyFactory;
 
+    /* Write Queue */
+    private ByteBuffer writeBuffer;
+    private boolean writeBufferLastPacket;
+    private Request writeRequest;
+
     /*
      * Response Management
      */
     private ArrayList<Request> requestQueue;
-    private ArrayList<BufferContainer> outputQueue;
+    private ArrayList<ResponseContent> outputQueue;
 
     /**
      * Constructor for a new HTTP session.
@@ -80,20 +67,13 @@ public class Session {
      * @param channel  The TCP this session is operating against
      * @param selector The NIO selector this channel interacts with.
      */
-    public Session(SocketChannel channel, Selector selector, Parameters parameters) {
+    public HttpSession(SocketChannel channel, Selector selector, Parameters parameters) {
 
-        this.sessionId = Session.lastSessionId;
-        Session.lastSessionId++;
+        super(channel, selector, parameters);
 
-        this.nextRequestId = 0;
-
-        this.channel = channel;
-        this.selector = selector;
-        this.maxRequestSize = IdealBlockSize.VALUE;
         this.readBuffer = ByteBuffer.allocate(128);
-        this.outputQueue = new ArrayList<BufferContainer>();
+        this.outputQueue = new ArrayList<ResponseContent>();
         this.requestQueue = new ArrayList<Request>();
-        this.parameters = parameters;
 
         this.reset();
     }
@@ -101,7 +81,7 @@ public class Session {
     public void reset() {
         this.requestHeaderData = new byte[maxRequestSize];
         this.requestHeaderMarker = 0;
-        this.requestHeaderLines = new ArrayList<Session$Line>();
+        this.requestHeaderLines = new ArrayList<HttpSession$Line>();
         this.lastHeaderByteLocation = 0;
         this.headerFactory = new RequestHeaderFactory();
         this.bodyReadBegun = false;
@@ -109,17 +89,7 @@ public class Session {
         this.readBuffer.clear();
     }
 
-    public long getSessionId() {
-        return sessionId;
-    }
-
-    public long getNextRequestId() {
-        long r = this.nextRequestId;
-        this.nextRequestId++;
-        return r;
-    }
-
-    public void queueBuffer(BufferContainer container) throws IOException {
+    public void queueBuffer(ResponseContent container) throws IOException {
         this.outputQueue.add(container);
         this.setSelectionRequest(true);
     }
@@ -133,9 +103,9 @@ public class Session {
         InetSocketAddress remote = (InetSocketAddress) this.channel
                 .getRemoteAddress();
 
-        Request r = Request.generateRequest(this.sessionId, this.getNextRequestId(),
+        Request r = Request.generateRequest(this.getSessionId(), this.getNextRequestId(),
                 remote.getHostString(), remote.getPort(), headerFactory.build(),
-                bodyFactory.build());
+                bodyFactory.build(), this.parameters);
 
         return r;
 
@@ -170,7 +140,7 @@ public class Session {
         this.headerFactory.reset();
 
         // walk the received header lines.
-        for (Session$Line sessionLine : this.requestHeaderLines) {
+        for (HttpSession$Line sessionLine : this.requestHeaderLines) {
 
             headerFactory.addLine(sessionLine.line);
 
@@ -229,7 +199,7 @@ public class Session {
                     line = new String(this.requestHeaderData, this.lastHeaderByteLocation, i - this.lastHeaderByteLocation - 1);
                 }
 
-                this.requestHeaderLines.add(new Session$Line(line, this.lastHeaderByteLocation, i + 1));
+                this.requestHeaderLines.add(new HttpSession$Line(line, this.lastHeaderByteLocation, i + 1));
                 this.lastHeaderByteLocation = (i + 1);
             }
 
@@ -252,75 +222,100 @@ public class Session {
 
     }
 
-    public void socketWriteEvent() throws IOException, CloseConnectionException {
+    private final void clearWriteOperations() {
+        this.writeRequest = null;
+        this.writeBuffer = null;
+        this.writeBufferLastPacket = false;
+    }
+
+    private final boolean hasWriteEventQueued() {
+        if (this.writeBuffer != null) {
+            if (this.writeBuffer.hasRemaining()) {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    private final void socketResponseConcluded() throws CloseConnectionException {
+        boolean shouldClose = true;
+
+        if (this.writeBufferLastPacket) {
+            if (this.writeRequest != null && this.writeRequest.isKeepAlive()) {
+                shouldClose = false;
+            }
+        }
+
+        this.clearWriteOperations();
+
+        if (shouldClose) {
+            throw new CloseConnectionException();
+        }
+    }
+
+    private final void socketWriteEventExecute() throws IOException, CloseConnectionException {
+
+        if (!this.hasWriteEventQueued()) {
+            this.socketResponseConcluded();
+        }
+        else {
+            this.channel.write(this.writeBuffer);
+
+            if (!this.writeBuffer.hasRemaining()) {
+                this.clearWriteOperations();
+            }
+        }
+
+    }
+
+    private final void covertResponseContentToQueue(ResponseContent responseContent) {
+        this.writeBuffer = ByteBuffer.wrap(responseContent.getBuffer());
+        this.writeBufferLastPacket = responseContent.isLastBufferForRequest();
+    }
+
+    private final void queueNextWriteEvent() throws ClosedChannelException {
 
         if (this.outputQueue.size() == 0) {
             this.setSelectionRequest(false);
             return;
         }
 
-        Request nextRequest = null;
-        BufferContainer nextContainer = null;
-
         if (this.requestQueue.size() > 0) {
-            nextRequest = this.requestQueue.get(0);
+            this.writeRequest = this.requestQueue.remove(0);
         }
 
-        if (nextRequest == null) {
-            // the output queue has unassigned buffers
-            // these are errors and can just go in order.
-            nextContainer = this.outputQueue.get(0);
-        } else {
-            for (BufferContainer bufferContainer : this.outputQueue) {
-                if (bufferContainer.getRequestId() == nextRequest.getRequestId()) {
-                    nextContainer = bufferContainer;
-                    break;
-                }
-            }
-        }
-
-        if (nextContainer == null) {
-            // next time a packet gets written it will reset this
-            this.setSelectionRequest(false);
+        if (this.writeRequest == null) {
+            this.covertResponseContentToQueue(this.outputQueue.remove(0));
             return;
-        }
+        } else {
+            Iterator<ResponseContent> iterator = this.outputQueue.iterator();
 
-        ByteBuffer bufferToWrite = nextContainer.getBuffer();
-        this.channel.write(bufferToWrite);
+            while (iterator.hasNext()) {
+                ResponseContent responseContent = iterator.next();
 
-        if (!bufferToWrite.hasRemaining()) {
-
-            this.outputQueue.remove(nextContainer);
-
-            if (nextContainer.isLastBufferForRequest()) {
-
-                // we're done with this response
-
-                if (nextRequest == null || !nextRequest.isKeepAlive()) {
-
-                    // shut it down - remove the request and fire a CloseConnectionException
-                    if (nextRequest != null) {
-                        this.requestQueue.remove(0);
-                    }
-
-                    throw new CloseConnectionException();
-
+                if (responseContent.getRequestId() == this.writeRequest.getRequestId()) {
+                    this.covertResponseContentToQueue(responseContent);
+                    iterator.remove();
+                    return;
                 }
-                else {
-                    // eventually we want to be able to support chunked
-                    // for now, we simply send the response
-                    if (nextRequest != null) {
-                        this.requestQueue.remove(0);
-                    }
-                }
-
-            }
-
-            if (this.outputQueue.size() == 0) {
-                this.setSelectionRequest(false);
             }
         }
 
+        if (!this.hasWriteEventQueued()) {
+            this.setSelectionRequest(false);
+        }
+
+    }
+
+    public void socketWriteEvent() throws IOException, CloseConnectionException {
+        if (this.hasWriteEventQueued()) {
+            this.socketWriteEventExecute();
+        } else {
+            queueNextWriteEvent();
+        }
     }
 
     public Request socketReadEvent() throws IOException, CloseConnectionException, HttpException {
