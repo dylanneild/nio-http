@@ -257,7 +257,7 @@ public class HttpSession extends Session {
         }
 
         if (this.writeRequest == null) {
-            this.covertResponseContentToQueue(this.contentQueue.remove());
+            this.covertResponseContentToQueue(this.contentQueue.poll());
             return;
         } else {
             Iterator<ResponseContent> iterator = this.contentQueue.iterator();

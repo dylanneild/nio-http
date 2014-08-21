@@ -14,13 +14,14 @@ import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.file.*;
-import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.ExecutionException;
 
 public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
-    private ArrayList<FileRequestObject> tasks;
+    private Queue<FileRequestObject> tasks;
     private FileSystem fileSystem;
     private MimeTypes mimeTypes;
 
@@ -32,7 +33,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
     public abstract String getDirectoryFooter(Request request);
 
     public BaseFileSystemRequestHandler() {
-        this.tasks = new ArrayList<FileRequestObject>();
+        this.tasks = new LinkedList<FileRequestObject>();
         this.fileSystem = FileSystems.getDefault();
         this.mimeTypes = MimeTypes.getInstance();
     }
@@ -202,7 +203,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
         // there are no further write events to execute;
         // let's see if there are more file read events to refill the buffers
-        FileRequestObject task = this.tasks.size() > 0 ? this.tasks.remove(0) : null;
+        FileRequestObject task = this.tasks.poll();
 
         if (task == null) {
             return false;
