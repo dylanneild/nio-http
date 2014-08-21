@@ -2,11 +2,13 @@ package com.codeandstrings.niohttp.sessions;
 
 import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.data.Parameters;
+import com.codeandstrings.niohttp.exceptions.InvalidMessageException;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
 import com.codeandstrings.niohttp.exceptions.tcp.CloseConnectionException;
 import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.response.Response;
 import com.codeandstrings.niohttp.response.ResponseContent;
+import com.codeandstrings.niohttp.response.ResponseMessage;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -87,9 +89,16 @@ abstract class Session {
 
     }
 
-    public void queueBuffer(ResponseContent container) throws IOException {
-        this.contentQueue.add(container);
+    public void queueMessage(ResponseMessage message) throws IOException {
+
+        if (message instanceof Response) {
+            this.responseQueue.add((Response)message);
+        } else {
+            this.contentQueue.add((ResponseContent)message);
+        }
+
         this.setSelectionRequest(true);
+
     }
 
     public void removeRequest(Request request) {

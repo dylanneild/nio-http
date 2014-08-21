@@ -151,7 +151,7 @@ public class Server implements Runnable {
                                 ResponseContent container = new ResponseContent(session.getSessionId(),
                                         -1, r.getByteBuffer(), true);
 
-                                session.queueBuffer(container);
+                                session.queueMessage(container);
 
                             }
 
@@ -171,7 +171,7 @@ public class Server implements Runnable {
                                 HttpSession session = this.sessions.get(container.getSessionId());
 
                                 if (session != null) {
-                                    session.queueBuffer(container);
+                                    session.queueMessage(container);
                                 }
                             }
 
