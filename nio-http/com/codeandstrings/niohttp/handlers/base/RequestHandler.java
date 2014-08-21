@@ -2,6 +2,7 @@ package com.codeandstrings.niohttp.handlers.base;
 
 import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.response.ResponseContent;
+import com.codeandstrings.niohttp.response.ResponseMessage;
 import com.codeandstrings.niohttp.wire.*;
 
 import java.io.*;
@@ -72,7 +73,7 @@ public abstract class RequestHandler implements Runnable {
         this.requestWriter.sendObject(r);
     }
 
-    public void sendBufferContainer(ResponseContent b) {
+    public void sendResponse(ResponseMessage b) {
         this.responseContentWriter.sendObject(b);
     }
 

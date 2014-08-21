@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
-public class ResponseContent implements Externalizable {
+public class ResponseContent implements Externalizable, ResponseMessage {
 
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {

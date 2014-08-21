@@ -97,7 +97,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
         Response response = responseFactory.create(request.getServerParameters());
         ResponseContent container = new ResponseContent(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), true);
 
-        this.sendBufferContainer(container);
+        this.sendResponse(container);
         this.scheduleWrites(selector);
 
     }
@@ -127,8 +127,8 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
         StringResponseFactory factory = new StringResponseFactory(request, "text/html", html.toString());
 
-        this.sendBufferContainer(factory.getHeader());
-        this.sendBufferContainer(factory.getBody());
+        this.sendResponse(factory.getHeader());
+        this.sendResponse(factory.getBody());
 
         this.scheduleWrites(selector);
 
@@ -177,7 +177,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
         ResponseContent responseHeader = new ResponseContent(request.getSessionId(), request.getRequestId(),
                 r.getByteBuffer(), (skipBody || notModified));
 
-        this.sendBufferContainer(responseHeader);
+        this.sendResponse(responseHeader);
 
         // if this is a HEAD request, don't bother sending back content
         // otherwise, schedule this new task for later
@@ -239,7 +239,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             ResponseContent responseContent = new ResponseContent(task.getSessionId(),
                     task.getRequestId(), content, finalBuffer);
 
-            this.sendBufferContainer(responseContent);
+            this.sendResponse(responseContent);
 
             if (finalBuffer) {
                 task.close();

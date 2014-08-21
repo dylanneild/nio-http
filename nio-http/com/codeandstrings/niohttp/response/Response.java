@@ -8,7 +8,7 @@ import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
 
-public class Response implements Externalizable {
+public class Response implements Externalizable, ResponseMessage {
 
 	private HttpProtocol protocol;
 	private RequestMethod method;
