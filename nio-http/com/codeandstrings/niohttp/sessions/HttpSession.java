@@ -115,7 +115,11 @@ public class HttpSession extends Session {
     }
 
     private Request storeAndReturnRequest(Request request) {
-        this.requestQueue.add(request);
+
+        if (request != null) {
+            this.requestQueue.add(request);
+        }
+
         return request;
     }
 
@@ -343,7 +347,7 @@ public class HttpSession extends Session {
                     this.bodyFactory.addBytes(bytes);
 
                     if (this.bodyFactory.isFull()) {
-                        return this.generateAndHandleRequest();
+                        return this.storeAndReturnRequest(this.generateAndHandleRequest());
                     } else {
                         return null;
                     }
