@@ -81,8 +81,8 @@ public abstract class RequestHandler implements Runnable {
         return this.responseContentWriter.executeObjectWriteEvent();
     }
 
-    public ResponseContent executeBufferReadEvent() throws IOException, ClassNotFoundException {
-        return (ResponseContent) this.responseContentReader.readObjectFromChannel();
+    public ResponseMessage executeBufferReadEvent() throws IOException, ClassNotFoundException {
+        return (ResponseMessage) this.responseContentReader.readObjectFromChannel();
     }
 
     public Pipe.SourceChannel getEngineSource() {

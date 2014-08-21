@@ -2,7 +2,6 @@ package com.codeandstrings.niohttp.sessions;
 
 import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.data.Parameters;
-import com.codeandstrings.niohttp.exceptions.InvalidMessageException;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
 import com.codeandstrings.niohttp.exceptions.tcp.CloseConnectionException;
 import com.codeandstrings.niohttp.request.Request;
@@ -18,7 +17,7 @@ import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.Queue;
 
-abstract class Session {
+public abstract class Session {
 
     /*
      * Session ID Management

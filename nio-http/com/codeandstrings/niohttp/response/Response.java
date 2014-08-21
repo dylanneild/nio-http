@@ -65,6 +65,16 @@ public class Response implements Externalizable, ResponseMessage {
         this.requestId = request.getRequestId();
 	}
 
+    @Override
+    public long getSessionId() {
+        return sessionId;
+    }
+
+    @Override
+    public long getRequestId() {
+        return requestId;
+    }
+
     public boolean isTransmitted() {
         return transmitted;
     }

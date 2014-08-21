@@ -17,19 +17,21 @@ import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.response.ResponseContent;
 import com.codeandstrings.niohttp.response.ExceptionResponseFactory;
 import com.codeandstrings.niohttp.response.Response;
+import com.codeandstrings.niohttp.response.ResponseMessage;
 import com.codeandstrings.niohttp.sessions.HttpSession;
+import com.codeandstrings.niohttp.sessions.Session;
 
 public class Server implements Runnable {
 
 	private Parameters parameters;
 	private InetSocketAddress socketAddress;
 	private ServerSocketChannel serverSocketChannel;
-    private HashMap<Long,HttpSession> sessions;
+    private HashMap<Long,Session> sessions;
     private RequestHandlerBroker requestHandlerBroker;
 
 	public Server() {
 		this.parameters = Parameters.getDefaultParameters();
-        this.sessions = new HashMap<Long,HttpSession>();
+        this.sessions = new HashMap<Long,Session>();
         this.requestHandlerBroker = new RequestHandlerBroker();
         Thread.currentThread().setName("NIO-HTTP Selection Thread");
 	}
@@ -165,10 +167,10 @@ public class Server implements Runnable {
                                 key.attach(requestHandler);
                             }
 
-                            ResponseContent container = requestHandler.executeBufferReadEvent();
+                            ResponseMessage container = requestHandler.executeBufferReadEvent();
 
                             if (container != null) {
-                                HttpSession session = this.sessions.get(container.getSessionId());
+                                Session session = this.sessions.get(container.getSessionId());
 
                                 if (session != null) {
                                     session.queueMessage(container);
@@ -194,7 +196,7 @@ public class Server implements Runnable {
                             try {
                                 session.socketWriteEvent();
                             }
-                            catch (CloseConnectionException e) {
+                            catch (Exception e) {
                                 this.sessions.remove(session.getSessionId());
                                 session.getChannel().close();
                             }

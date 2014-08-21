@@ -68,6 +68,7 @@ public class ResponseContent implements Externalizable, ResponseMessage {
 		this.buffer = buffer;
 	}
 
+    @Override
     public long getSessionId() {
         return bufferHeader.getSessionId();
     }
@@ -80,6 +81,7 @@ public class ResponseContent implements Externalizable, ResponseMessage {
         bufferHeader.setSessionId(sessionId);
     }
 
+    @Override
     public long getRequestId() {
         return bufferHeader.getRequestId();
     }
