@@ -125,7 +125,7 @@ public class Server implements Runnable {
 
                                 if (request != null) {
 
-                                    session.reset();
+                                    session.resetHeaderReads();
 
                                     RequestHandler requestHandler = this.requestHandlerBroker.getHandlerForRequest(request);
 

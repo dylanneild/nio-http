@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
@@ -56,10 +55,6 @@ public class HttpSession extends Session {
     private boolean writeBufferLastPacket;
     private Request writeRequest;
 
-    /* Response Management */
-    private ArrayList<Request> requestQueue;
-    private ArrayList<ResponseContent> outputQueue;
-
     /**
      * Constructor for a new HTTP session.
      *
@@ -67,17 +62,13 @@ public class HttpSession extends Session {
      * @param selector The NIO selector this channel interacts with.
      */
     public HttpSession(SocketChannel channel, Selector selector, Parameters parameters) {
-
         super(channel, selector, parameters);
-
         this.readBuffer = ByteBuffer.allocate(128);
-        this.outputQueue = new ArrayList<ResponseContent>();
-        this.requestQueue = new ArrayList<Request>();
-
-        this.reset();
+        this.resetHeaderReads();
     }
 
-    public void reset() {
+    @Override
+    public void resetHeaderReads() {
         this.requestHeaderData = new byte[maxRequestSize];
         this.requestHeaderMarker = 0;
         this.requestHeaderLines = new ArrayList<HttpSession$Line>();
@@ -86,15 +77,6 @@ public class HttpSession extends Session {
         this.bodyReadBegun = false;
         this.bodyFactory = new RequestBodyFactory();
         this.readBuffer.clear();
-    }
-
-    public void queueBuffer(ResponseContent container) throws IOException {
-        this.outputQueue.add(container);
-        this.setSelectionRequest(true);
-    }
-
-    public SocketChannel getChannel() {
-        return this.channel;
     }
 
     private Request generateAndHandleRequest() throws IOException {
@@ -123,10 +105,6 @@ public class HttpSession extends Session {
         return request;
     }
 
-    public void removeRequest(Request request) {
-        this.requestQueue.remove(request);
-    }
-
     private Request analyzeForHeader() throws HttpException, IOException {
 
         // likely won't ever happen anyways, but just in case
@@ -139,7 +117,7 @@ public class HttpSession extends Session {
         if (this.requestHeaderLines.size() == 0)
             return null;
 
-        // reset our factory
+        // resetHeaderReads our factory
         this.headerFactory.reset();
 
         // walk the received header lines.
@@ -207,21 +185,6 @@ public class HttpSession extends Session {
             }
 
         }
-
-    }
-
-    private void setSelectionRequest(boolean write)
-            throws ClosedChannelException {
-
-        int ops;
-
-        if (write) {
-            ops = SelectionKey.OP_READ | SelectionKey.OP_WRITE;
-        } else {
-            ops = SelectionKey.OP_READ;
-        }
-
-        this.channel.register(this.selector, ops, this);
 
     }
 
@@ -316,6 +279,7 @@ public class HttpSession extends Session {
 
     }
 
+    @Override
     public void socketWriteEvent() throws IOException, CloseConnectionException {
         if (this.hasWriteEventQueued()) {
             this.socketWriteEventExecute();
@@ -324,6 +288,8 @@ public class HttpSession extends Session {
         }
     }
 
+
+    @Override
     public Request socketReadEvent() throws IOException, CloseConnectionException, HttpException {
 
         try {
