@@ -7,8 +7,12 @@ import com.codeandstrings.niohttp.data.HeaderValues;
 import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
+import com.codeandstrings.niohttp.request.Request;
 
 public class Response implements Externalizable, ResponseMessage {
+
+    private long sessionId;
+    private long requestId;
 
 	private HttpProtocol protocol;
 	private RequestMethod method;
@@ -19,6 +23,8 @@ public class Response implements Externalizable, ResponseMessage {
 
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeLong(this.sessionId);
+        out.writeLong(this.requestId);
         out.writeObject(this.protocol);
         out.writeObject(this.method);
         out.writeInt(this.code);
@@ -28,6 +34,8 @@ public class Response implements Externalizable, ResponseMessage {
 
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        this.sessionId = in.readLong();
+        this.requestId = in.readLong();
         this.protocol = (HttpProtocol)in.readObject();
         this.method = (RequestMethod)in.readObject();
         this.code = in.readInt();
@@ -37,10 +45,20 @@ public class Response implements Externalizable, ResponseMessage {
 
     public Response() {}
 
-	public Response(HttpProtocol protocol, RequestMethod method) {
-		this.protocol = protocol;
-		this.method = method;
-		this.headers = new HeaderValues(true);
+    private void configureFromConstructor(long sessionId, HttpProtocol protocol, RequestMethod method) {
+        this.sessionId = sessionId;
+        this.protocol = protocol;
+        this.method = method;
+        this.headers = new HeaderValues(true);
+    }
+
+    public Response(long sessionId, HttpProtocol protocol, RequestMethod method) {
+        this.configureFromConstructor(sessionId, protocol, method);
+    }
+
+	public Response(Request request, HttpProtocol protocol, RequestMethod method) {
+        this.configureFromConstructor(request.getSessionId(), protocol, method);
+        this.requestId = request.getRequestId();
 	}
 
     public void removeHeader(String name) {

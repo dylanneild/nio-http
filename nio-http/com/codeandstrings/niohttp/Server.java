@@ -146,7 +146,7 @@ public class Server implements Runnable {
 
                             } catch (HttpException e) {
 
-                                Response r = (new ExceptionResponseFactory(e)).create(this.parameters);
+                                Response r = (new ExceptionResponseFactory(e)).create(session.getSessionId(), this.parameters);
 
                                 ResponseContent container = new ResponseContent(session.getSessionId(),
                                         -1, r.getByteBuffer(), true);

@@ -53,7 +53,7 @@ public class ResponseFactory {
             return null;
         }
 
-        Response r = new Response(protocol, method);
+        Response r = new Response(request, protocol, method);
 
         r.setCode(304);
         r.setDescription("Not Modified");
@@ -78,7 +78,7 @@ public class ResponseFactory {
         HttpProtocol protocol = request.getRequestProtocol();
         RequestMethod requestMethod = request.getRequestMethod();
 
-        Response r = new Response(protocol, requestMethod);
+        Response r = new Response(request, protocol, requestMethod);
 
         if (protocol != HttpProtocol.HTTP0_9) {
             r.setCode(200);
@@ -134,8 +134,8 @@ public class ResponseFactory {
 
     }
 
-	public static Response createResponse(HttpException e, Parameters parameters) {
-		return (new ExceptionResponseFactory(e)).create(parameters);
+	public static Response createResponse(HttpException e, Request request) {
+		return (new ExceptionResponseFactory(e)).create(request.getSessionId(), request.getServerParameters());
 	}
 
 }

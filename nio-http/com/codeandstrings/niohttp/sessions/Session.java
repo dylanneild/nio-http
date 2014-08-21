@@ -5,6 +5,7 @@ import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
 import com.codeandstrings.niohttp.exceptions.tcp.CloseConnectionException;
 import com.codeandstrings.niohttp.request.Request;
+import com.codeandstrings.niohttp.response.Response;
 import com.codeandstrings.niohttp.response.ResponseContent;
 
 import java.io.IOException;
@@ -36,6 +37,7 @@ abstract class Session {
 
     /* Response Management */
     protected ArrayList<Request> requestQueue;
+    protected ArrayList<Response> responseQueue;
     protected ArrayList<ResponseContent> outputQueue;
 
     protected Session(SocketChannel channel, Selector selector, Parameters parameters) {
