@@ -13,6 +13,7 @@ public class Response implements Externalizable, ResponseMessage {
 
     private long sessionId;
     private long requestId;
+    private boolean transmitted;
 
 	private HttpProtocol protocol;
 	private RequestMethod method;
@@ -25,6 +26,7 @@ public class Response implements Externalizable, ResponseMessage {
     public void writeExternal(ObjectOutput out) throws IOException {
         out.writeLong(this.sessionId);
         out.writeLong(this.requestId);
+        out.writeBoolean(this.transmitted);
         out.writeObject(this.protocol);
         out.writeObject(this.method);
         out.writeInt(this.code);
@@ -36,6 +38,7 @@ public class Response implements Externalizable, ResponseMessage {
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
         this.sessionId = in.readLong();
         this.requestId = in.readLong();
+        this.transmitted = in.readBoolean();
         this.protocol = (HttpProtocol)in.readObject();
         this.method = (RequestMethod)in.readObject();
         this.code = in.readInt();
@@ -50,6 +53,7 @@ public class Response implements Externalizable, ResponseMessage {
         this.protocol = protocol;
         this.method = method;
         this.headers = new HeaderValues(true);
+        this.transmitted = false;
     }
 
     public Response(long sessionId, HttpProtocol protocol, RequestMethod method) {
@@ -60,6 +64,14 @@ public class Response implements Externalizable, ResponseMessage {
         this.configureFromConstructor(request.getSessionId(), protocol, method);
         this.requestId = request.getRequestId();
 	}
+
+    public boolean isTransmitted() {
+        return transmitted;
+    }
+
+    public void setTransmitted(boolean transmitted) {
+        this.transmitted = transmitted;
+    }
 
     public void removeHeader(String name) {
         headers.removeHeader(name);
