@@ -245,22 +245,22 @@ public class HttpSession extends Session {
 
     private final void queueNextWriteEvent() throws ClosedChannelException {
 
-        if (this.outputQueue.size() == 0) {
+        if (this.contentQueue.size() == 0) {
             this.setSelectionRequest(false);
             return;
         }
 
         if (this.writeRequest == null) {
             if (this.requestQueue.size() > 0) {
-                this.writeRequest = this.requestQueue.remove(0);
+                this.writeRequest = this.requestQueue.remove();
             }
         }
 
         if (this.writeRequest == null) {
-            this.covertResponseContentToQueue(this.outputQueue.remove(0));
+            this.covertResponseContentToQueue(this.contentQueue.remove());
             return;
         } else {
-            Iterator<ResponseContent> iterator = this.outputQueue.iterator();
+            Iterator<ResponseContent> iterator = this.contentQueue.iterator();
 
             while (iterator.hasNext()) {
                 ResponseContent responseContent = iterator.next();
