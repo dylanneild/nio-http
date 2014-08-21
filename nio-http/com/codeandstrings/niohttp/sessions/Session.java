@@ -13,7 +13,8 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Queue;
 
 abstract class Session {
 
@@ -36,9 +37,9 @@ abstract class Session {
     protected int maxRequestSize;
 
     /* Response Management */
-    protected ArrayList<Request> requestQueue;
-    protected ArrayList<Response> responseQueue;
-    protected ArrayList<ResponseContent> outputQueue;
+    protected Queue<Request> requestQueue;
+    protected Queue<Response> responseQueue;
+    protected Queue<ResponseContent> contentQueue;
 
     protected Session(SocketChannel channel, Selector selector, Parameters parameters) {
 
@@ -51,8 +52,9 @@ abstract class Session {
 
         this.maxRequestSize = IdealBlockSize.VALUE;
         this.nextRequestId = 0;
-        this.outputQueue = new ArrayList<ResponseContent>();
-        this.requestQueue = new ArrayList<Request>();
+        this.requestQueue = new LinkedList<Request>();
+        this.responseQueue = new LinkedList<Response>();
+        this.contentQueue = new LinkedList<ResponseContent>();
     }
 
     public long getSessionId() {
@@ -86,7 +88,7 @@ abstract class Session {
     }
 
     public void queueBuffer(ResponseContent container) throws IOException {
-        this.outputQueue.add(container);
+        this.contentQueue.add(container);
         this.setSelectionRequest(true);
     }
 
