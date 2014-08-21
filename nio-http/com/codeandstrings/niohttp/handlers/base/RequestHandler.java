@@ -2,6 +2,7 @@ package com.codeandstrings.niohttp.handlers.base;
 
 import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.response.ResponseContent;
+import com.codeandstrings.niohttp.wire.*;
 
 import java.io.*;
 import java.nio.channels.Pipe;
@@ -17,10 +18,10 @@ public abstract class RequestHandler implements Runnable {
     private Pipe.SinkChannel engineSink;
     private Pipe.SinkChannel handlerSink;
 
-    private RequestReader requestReader;
-    private RequestWriter requestWriter;
-    private BufferReader bufferReader;
-    private BufferWriter bufferWriter;
+    private PipeObjectReader requestReader;
+    private PipeObjectWriter requestWriter;
+    private PipeObjectReader responseContentReader;
+    private PipeObjectWriter responseContentWriter;
 
     private Thread handlerThread;
 
@@ -41,10 +42,10 @@ public abstract class RequestHandler implements Runnable {
             this.handlerSink.configureBlocking(false);
             this.engineSink.configureBlocking(false);
 
-            this.requestReader = new RequestReader(this.handlerSource);
-            this.requestWriter = new RequestWriter(this.engineSink);
-            this.bufferReader = new BufferReader(this.engineSource);
-            this.bufferWriter = new BufferWriter(this.handlerSink);
+            this.requestReader = new PipeObjectReader(this.handlerSource);
+            this.requestWriter = new PipeObjectWriter(this.engineSink);
+            this.responseContentReader = new PipeObjectReader(this.engineSource);
+            this.responseContentWriter = new PipeObjectWriter(this.handlerSink);
 
         }
         catch (Exception e) {
@@ -60,27 +61,27 @@ public abstract class RequestHandler implements Runnable {
     }
 
     public Request executeRequestReadEvent() throws IOException, ClassNotFoundException {
-        return this.requestReader.readRequestFromChannel();
+        return (Request) this.requestReader.readObjectFromChannel();
     }
 
     public boolean executeRequestWriteEvent() throws IOException {
-        return this.requestWriter.executeRequestWriteEvent();
+        return this.requestWriter.executeObjectWriteEvent();
     }
 
     public void sendRequest(Request r) {
-        this.requestWriter.sendRequest(r);
+        this.requestWriter.sendObject(r);
     }
 
     public void sendBufferContainer(ResponseContent b) {
-        this.bufferWriter.sendBufferContainer(b);
+        this.responseContentWriter.sendObject(b);
     }
 
     public boolean executeBufferWriteEvent() throws IOException {
-        return this.bufferWriter.executeBufferWriteEvent();
+        return this.responseContentWriter.executeObjectWriteEvent();
     }
 
     public ResponseContent executeBufferReadEvent() throws IOException, ClassNotFoundException {
-        return this.bufferReader.readBufferFromChannel();
+        return (ResponseContent) this.responseContentReader.readObjectFromChannel();
     }
 
     public Pipe.SourceChannel getEngineSource() {

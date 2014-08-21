@@ -1,7 +1,6 @@
-package com.codeandstrings.niohttp.handlers.base;
+package com.codeandstrings.niohttp.wire;
 
-import com.codeandstrings.niohttp.response.ResponseContent;
-import com.codeandstrings.niohttp.response.ResponseContentHeader;
+import com.codeandstrings.niohttp.request.Request;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -9,29 +8,27 @@ import java.io.ObjectInputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 
-public class BufferReader {
+public class PipeObjectReader {
 
     private Pipe.SourceChannel channel;
-
     private ByteBuffer currentSizeBuffer;
-    private ByteBuffer currentBuffer;
-
+    private ByteBuffer currentObjectBuffer;
     private boolean currentSizeDone;
-    private boolean currentBufferDone;
+    private boolean currentObjectDone;
 
     private void reset() {
         this.currentSizeBuffer = null;
-        this.currentBuffer = null;
+        this.currentObjectBuffer = null;
         this.currentSizeDone = false;
-        this.currentBufferDone = false;
+        this.currentObjectDone = false;
     }
-    
-    public BufferReader(Pipe.SourceChannel channel) {
+
+    public PipeObjectReader(Pipe.SourceChannel channel) {
         this.channel = channel;
         this.reset();
     }
 
-    private boolean executeBufferReadSize() throws IOException {
+    private boolean executeReadSize() throws IOException {
 
         // read the size buffer
         if (!this.currentSizeDone) {
@@ -69,70 +66,70 @@ public class BufferReader {
 
     }
 
-    private boolean executeBufferRead(int size) throws IOException {
+    private boolean executeReadObject(int size) throws IOException {
 
-        // read the actual buffer
-        if (!this.currentBufferDone) {
-            if (this.currentBuffer == null) {
+        // read the request buffer
+        if (!this.currentObjectDone) {
+            if (this.currentObjectBuffer == null) {
 
-                this.currentBuffer = ByteBuffer.allocate(size);
-                this.channel.read(this.currentBuffer);
+                this.currentObjectBuffer = ByteBuffer.allocate(size);
+                this.channel.read(this.currentObjectBuffer);
 
-                if (this.currentBuffer.hasRemaining()) {
+                if (this.currentObjectBuffer.hasRemaining()) {
                     return false;
                 } else {
-                    this.currentBuffer.flip();
-                    this.currentBufferDone = true;
+                    this.currentObjectBuffer.flip();
+                    this.currentObjectDone = true;
                     return true;
                 }
 
-            } else if (this.currentBuffer.hasRemaining()) {
+            } else if (this.currentObjectBuffer.hasRemaining()) {
 
-                this.channel.read(this.currentBuffer);
+                this.channel.read(this.currentObjectBuffer);
 
-                if (this.currentBuffer.hasRemaining()) {
+                if (this.currentObjectBuffer.hasRemaining()) {
                     return false;
                 } else {
-                    this.currentBuffer.flip();
-                    this.currentBufferDone = true;
+                    this.currentObjectBuffer.flip();
+                    this.currentObjectDone = true;
                     return true;
                 }
 
             }
         }
 
-        this.currentBuffer.rewind();
+        this.currentObjectBuffer.rewind();
 
         return true;
 
     }
 
-    private ResponseContent getContainer() throws IOException, ClassNotFoundException {
-
-        ByteArrayInputStream bais = new ByteArrayInputStream(currentBuffer.array());
-        ObjectInputStream ois = new ObjectInputStream(bais);
-
-        ResponseContent container = (ResponseContent)ois.readObject();
-
-        ois.close();
-
-        return container;
-
+    private Object getObject() throws IOException, ClassNotFoundException {
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(currentObjectBuffer.array());
+             ObjectInputStream ois = new ObjectInputStream(bais)) {
+            return ois.readObject();
+        }
+        catch (IOException e) {
+            throw e;
+        }
+        catch (ClassNotFoundException e) {
+            throw e;
+        }
     }
-    
-    public ResponseContent readBufferFromChannel() throws IOException, ClassNotFoundException {
 
-        if (!executeBufferReadSize()) {
+    public Object readObjectFromChannel() throws IOException, ClassNotFoundException {
+
+        if (!executeReadSize()) {
             return null;
         }
 
         int requestBufferSize = this.currentSizeBuffer.getInt();
 
-        if (!executeBufferRead(requestBufferSize)) {
+        if (!executeReadObject(requestBufferSize)) {
             return null;
         }
 
-        ResponseContent r = this.getContainer();
+        Object r = getObject();
 
         this.reset();
 

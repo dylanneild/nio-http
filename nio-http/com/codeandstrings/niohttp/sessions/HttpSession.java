@@ -41,6 +41,7 @@ class HttpSession$Line {
 
 public class HttpSession extends Session {
 
+    /* Object Variables */
     private byte[] requestHeaderData;
     private int requestHeaderMarker;
     private ArrayList<HttpSession$Line> requestHeaderLines;
@@ -55,9 +56,7 @@ public class HttpSession extends Session {
     private boolean writeBufferLastPacket;
     private Request writeRequest;
 
-    /*
-     * Response Management
-     */
+    /* Response Management */
     private ArrayList<Request> requestQueue;
     private ArrayList<ResponseContent> outputQueue;
 
@@ -223,9 +222,12 @@ public class HttpSession extends Session {
     }
 
     private final void clearWriteOperations() {
-        this.writeRequest = null;
+        if (this.writeBufferLastPacket) {
+            this.writeRequest = null;
+            this.writeBufferLastPacket = false;
+        }
+
         this.writeBuffer = null;
-        this.writeBufferLastPacket = false;
     }
 
     private final boolean hasWriteEventQueued() {
@@ -241,12 +243,15 @@ public class HttpSession extends Session {
     }
 
     private final void socketResponseConcluded() throws CloseConnectionException {
+
         boolean shouldClose = true;
 
         if (this.writeBufferLastPacket) {
             if (this.writeRequest != null && this.writeRequest.isKeepAlive()) {
                 shouldClose = false;
             }
+        } else {
+            shouldClose = false;
         }
 
         this.clearWriteOperations();
@@ -258,15 +263,10 @@ public class HttpSession extends Session {
 
     private final void socketWriteEventExecute() throws IOException, CloseConnectionException {
 
-        if (!this.hasWriteEventQueued()) {
-            this.socketResponseConcluded();
-        }
-        else {
-            this.channel.write(this.writeBuffer);
+        this.channel.write(this.writeBuffer);
 
-            if (!this.writeBuffer.hasRemaining()) {
-                this.clearWriteOperations();
-            }
+        if (!this.writeBuffer.hasRemaining()) {
+            this.socketResponseConcluded();
         }
 
     }
@@ -283,8 +283,10 @@ public class HttpSession extends Session {
             return;
         }
 
-        if (this.requestQueue.size() > 0) {
-            this.writeRequest = this.requestQueue.remove(0);
+        if (this.writeRequest == null) {
+            if (this.requestQueue.size() > 0) {
+                this.writeRequest = this.requestQueue.remove(0);
+            }
         }
 
         if (this.writeRequest == null) {
