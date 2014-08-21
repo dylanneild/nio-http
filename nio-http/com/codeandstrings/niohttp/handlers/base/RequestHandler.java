@@ -2,6 +2,10 @@ package com.codeandstrings.niohttp.handlers.base;
 
 import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.response.ResponseContent;
+import com.codeandstrings.niohttp.wire.RequestReader;
+import com.codeandstrings.niohttp.wire.RequestWriter;
+import com.codeandstrings.niohttp.wire.ResponseContentReader;
+import com.codeandstrings.niohttp.wire.ResponseContentWriter;
 
 import java.io.*;
 import java.nio.channels.Pipe;
@@ -19,8 +23,8 @@ public abstract class RequestHandler implements Runnable {
 
     private RequestReader requestReader;
     private RequestWriter requestWriter;
-    private BufferReader bufferReader;
-    private BufferWriter bufferWriter;
+    private ResponseContentReader responseContentReader;
+    private ResponseContentWriter responseContentWriter;
 
     private Thread handlerThread;
 
@@ -43,8 +47,8 @@ public abstract class RequestHandler implements Runnable {
 
             this.requestReader = new RequestReader(this.handlerSource);
             this.requestWriter = new RequestWriter(this.engineSink);
-            this.bufferReader = new BufferReader(this.engineSource);
-            this.bufferWriter = new BufferWriter(this.handlerSink);
+            this.responseContentReader = new ResponseContentReader(this.engineSource);
+            this.responseContentWriter = new ResponseContentWriter(this.handlerSink);
 
         }
         catch (Exception e) {
@@ -72,15 +76,15 @@ public abstract class RequestHandler implements Runnable {
     }
 
     public void sendBufferContainer(ResponseContent b) {
-        this.bufferWriter.sendBufferContainer(b);
+        this.responseContentWriter.sendBufferContainer(b);
     }
 
     public boolean executeBufferWriteEvent() throws IOException {
-        return this.bufferWriter.executeBufferWriteEvent();
+        return this.responseContentWriter.executeBufferWriteEvent();
     }
 
     public ResponseContent executeBufferReadEvent() throws IOException, ClassNotFoundException {
-        return this.bufferReader.readBufferFromChannel();
+        return this.responseContentReader.readBufferFromChannel();
     }
 
     public Pipe.SourceChannel getEngineSource() {

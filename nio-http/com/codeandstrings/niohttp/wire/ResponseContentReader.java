@@ -1,4 +1,4 @@
-package com.codeandstrings.niohttp.handlers.base;
+package com.codeandstrings.niohttp.wire;
 
 import com.codeandstrings.niohttp.response.ResponseContent;
 import com.codeandstrings.niohttp.response.ResponseContentHeader;
@@ -9,7 +9,7 @@ import java.io.ObjectInputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 
-public class BufferReader {
+public class ResponseContentReader {
 
     private Pipe.SourceChannel channel;
 
@@ -26,7 +26,7 @@ public class BufferReader {
         this.currentBufferDone = false;
     }
     
-    public BufferReader(Pipe.SourceChannel channel) {
+    public ResponseContentReader(Pipe.SourceChannel channel) {
         this.channel = channel;
         this.reset();
     }
@@ -109,14 +109,16 @@ public class BufferReader {
 
     private ResponseContent getContainer() throws IOException, ClassNotFoundException {
 
-        ByteArrayInputStream bais = new ByteArrayInputStream(currentBuffer.array());
-        ObjectInputStream ois = new ObjectInputStream(bais);
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(currentBuffer.array());
+             ObjectInputStream ois = new ObjectInputStream(bais)) {
 
-        ResponseContent container = (ResponseContent)ois.readObject();
+            return (ResponseContent)ois.readObject();
 
-        ois.close();
-
-        return container;
+        }  catch (IOException e) {
+            throw e;
+        } catch (ClassNotFoundException e) {
+            throw e;
+        }
 
     }
     

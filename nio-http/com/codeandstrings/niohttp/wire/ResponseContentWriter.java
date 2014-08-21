@@ -1,4 +1,4 @@
-package com.codeandstrings.niohttp.handlers.base;
+package com.codeandstrings.niohttp.wire;
 
 import com.codeandstrings.niohttp.response.ResponseContent;
 
@@ -9,14 +9,14 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 import java.util.ArrayList;
 
-public class BufferWriter {
+public class ResponseContentWriter {
 
     private Pipe.SinkChannel channel;
     private ArrayList<ResponseContent> queue;
     private ByteBuffer currentSizeBuffer;
     private ByteBuffer currentDataBuffer;
 
-    public BufferWriter (Pipe.SinkChannel channel) {
+    public ResponseContentWriter(Pipe.SinkChannel channel) {
         this.channel = channel;
         this.queue = new ArrayList<ResponseContent>();
     }
@@ -30,18 +30,14 @@ public class BufferWriter {
         if (queue.size() == 0)
             return false;
 
-        ResponseContent container = queue.remove(0);
-
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              ObjectOutputStream oos = new ObjectOutputStream(baos)) {
 
-            oos.writeObject(container);
+            oos.writeObject(queue.remove(0));
             oos.flush();
 
-            byte bytes[] = baos.toByteArray();
-
-            this.currentDataBuffer = ByteBuffer.wrap(bytes);
-            this.currentSizeBuffer = ByteBuffer.allocate(Integer.SIZE / 8).putInt(bytes.length);
+            this.currentSizeBuffer = ByteBuffer.allocate(Integer.SIZE / 8).putInt(baos.size());
+            this.currentDataBuffer = ByteBuffer.wrap(baos.toByteArray());
 
             this.currentSizeBuffer.flip();
 

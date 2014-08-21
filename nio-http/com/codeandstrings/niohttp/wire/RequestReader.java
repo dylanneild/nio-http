@@ -1,4 +1,4 @@
-package com.codeandstrings.niohttp.handlers.base;
+package com.codeandstrings.niohttp.wire;
 
 import com.codeandstrings.niohttp.request.Request;
 
@@ -105,16 +105,17 @@ public class RequestReader {
     }
 
     private Request getRequest() throws IOException, ClassNotFoundException {
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(currentRequestBuffer.array());
+             ObjectInputStream ois = new ObjectInputStream(bais)) {
 
-        ByteArrayInputStream bais = new ByteArrayInputStream(currentRequestBuffer.array());
-        ObjectInputStream ois = new ObjectInputStream(bais);
-
-        Request r = (Request)ois.readObject();
-
-        ois.close();
-
-        return r;
-
+            return (Request)ois.readObject();
+        }
+        catch (IOException e) {
+            throw e;
+        }
+        catch (ClassNotFoundException e) {
+            throw e;
+        }
     }
 
     /**

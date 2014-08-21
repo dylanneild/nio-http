@@ -1,4 +1,4 @@
-package com.codeandstrings.niohttp.handlers.base;
+package com.codeandstrings.niohttp.wire;
 
 import com.codeandstrings.niohttp.request.Request;
 
@@ -30,21 +30,22 @@ public class RequestWriter {
         if (queue.size() == 0)
             return false;
 
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ObjectOutputStream oos = new ObjectOutputStream(baos)) {
 
-        oos.writeObject(queue.remove(0));
+            oos.writeObject(queue.remove(0));
+            oos.flush();
 
-        oos.flush();
-        oos.close();
+            this.currentSizeBuffer = ByteBuffer.allocate(Integer.SIZE / 8).putInt(baos.size());
+            this.currentRequestBuffer = ByteBuffer.wrap(baos.toByteArray());
 
-        this.currentSizeBuffer = ByteBuffer.allocate(Integer.SIZE / 8).putInt(baos.size());
-        this.currentRequestBuffer = ByteBuffer.allocate(baos.size()).put(baos.toByteArray());
+            this.currentSizeBuffer.flip();
 
-        this.currentSizeBuffer.flip();
-        this.currentRequestBuffer.flip();
-
-        return true;
+            return true;
+        }
+        catch (IOException e) {
+            throw e;
+        }
 
     }
 
