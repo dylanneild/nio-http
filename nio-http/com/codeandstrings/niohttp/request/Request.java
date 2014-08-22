@@ -244,7 +244,7 @@ public class Request implements Externalizable {
 		return header.getHeaders(name);
 	}
 
-	public Set<String> getHeaderNames() {
+	public List<String> getHeaderNames() {
 		return header.getHeaderNames();
 	}
 	

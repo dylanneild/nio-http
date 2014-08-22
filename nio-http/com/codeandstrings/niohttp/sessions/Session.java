@@ -14,8 +14,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.*;
 
 public abstract class Session {
 
@@ -53,9 +52,11 @@ public abstract class Session {
 
         this.maxRequestSize = IdealBlockSize.VALUE;
         this.nextRequestId = 0;
+
         this.requestQueue = new LinkedList<Request>();
-        this.responseQueue = new LinkedList<Response>();
         this.contentQueue = new LinkedList<ResponseContent>();
+        this.responseQueue = new LinkedList<Response>();
+
     }
 
     public long getSessionId() {
@@ -102,6 +103,15 @@ public abstract class Session {
 
     public void removeRequest(Request request) {
         this.requestQueue.remove(request);
+    }
+
+    public Request getRequest(long requestId) {
+        for (Request r : this.requestQueue) {
+            if (r.getRequestId()==requestId)
+                return r;
+        }
+
+        return null;
     }
 
     public abstract void resetHeaderReads();

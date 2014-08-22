@@ -70,6 +70,8 @@ public class ResponseFactory {
             r.addHeader("Connection", "close");
         }
 
+        r.setBodyIncluded(false);
+
         return r;
     }
 
@@ -80,19 +82,17 @@ public class ResponseFactory {
 
         Response r = new Response(request, protocol, requestMethod);
 
-        if (protocol != HttpProtocol.HTTP0_9) {
-            r.setCode(200);
-            r.setDescription("OK");
-            r.addHeader("Date", DateUtils.getRfc822DateStringGMT(new Date()));
-            r.addHeader("Server", request.getServerParameters().getServerString());
+        r.setCode(200);
+        r.setDescription("OK");
+        r.addHeader("Date", DateUtils.getRfc822DateStringGMT(new Date()));
+        r.addHeader("Server", request.getServerParameters().getServerString());
 
-            ResponseFactory.addVaryTransferEncoding(r);
+        ResponseFactory.addVaryTransferEncoding(r);
 
-            if (request.isKeepAlive()) {
-                r.addHeader("Connection", "keep-alive");
-            } else {
-                r.addHeader("Connection", "close");
-            }
+        if (request.isKeepAlive()) {
+            r.addHeader("Connection", "keep-alive");
+        } else {
+            r.addHeader("Connection", "close");
         }
 
         return r;
@@ -123,12 +123,8 @@ public class ResponseFactory {
         HttpProtocol protocol = request.getRequestProtocol();
         Response r = createBasicResponse(request);
 
-        if (protocol != HttpProtocol.HTTP0_9) {
-            r.setCode(200);
-            r.setDescription("OK");
-            r.addHeader("Content-Type", contentType);
-            r.addHeader("Content-Length", String.valueOf(contentSize));
-        }
+        r.addHeader("Content-Type", contentType);
+        r.addHeader("Content-Length", String.valueOf(contentSize));
 
         return r;
 

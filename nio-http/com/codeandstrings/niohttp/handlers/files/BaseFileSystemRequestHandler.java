@@ -93,14 +93,8 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
     }
 
     private void sendException(HttpException e, Request request, Selector selector) throws ClosedChannelException {
-
-        ExceptionResponseFactory responseFactory = new ExceptionResponseFactory(e);
-        Response response = responseFactory.create(request.getSessionId(), request.getServerParameters());
-        ResponseContent container = new ResponseContent(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), true);
-
-        this.sendResponse(container);
+        this.sendResponse(ResponseFactory.createResponse(e, request));
         this.scheduleWrites(selector);
-
     }
 
     private void serviceDirectoryRequest(Path path, Request request, Selector selector) throws Exception {
@@ -175,10 +169,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             BaseFileSystemRequestHandler.addFileInformationToRequest(task, r);
         }
 
-        ResponseContent responseHeader = new ResponseContent(request.getSessionId(), request.getRequestId(),
-                r.getByteBuffer(), (skipBody || notModified));
-
-        this.sendResponse(responseHeader);
+        this.sendResponse(r);
 
         // if this is a HEAD request, don't bother sending back content
         // otherwise, schedule this new task for later

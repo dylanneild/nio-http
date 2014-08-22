@@ -2,6 +2,7 @@ package com.codeandstrings.niohttp.response;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
 import com.codeandstrings.niohttp.data.HeaderValues;
 import com.codeandstrings.niohttp.data.IdealBlockSize;
@@ -15,6 +16,8 @@ public class Response implements Externalizable, ResponseMessage {
     private long requestId;
     private boolean transmitted;
 
+    private boolean bodyIncluded;
+
 	private HttpProtocol protocol;
 	private RequestMethod method;
 
@@ -22,28 +25,64 @@ public class Response implements Externalizable, ResponseMessage {
 	private String description;
 	private HeaderValues headers;
 
+    private byte[] byteRepresentation;
+
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {
+
         out.writeLong(this.sessionId);
         out.writeLong(this.requestId);
         out.writeBoolean(this.transmitted);
+        out.writeBoolean(this.bodyIncluded);
         out.writeObject(this.protocol);
         out.writeObject(this.method);
         out.writeInt(this.code);
         out.writeObject(this.description);
         out.writeObject(this.headers);
+
+        byte outgoingRepresentation[] = this.createByteRepresentation();
+
+        if (outgoingRepresentation == null) {
+            out.writeInt(-1);
+        } else {
+            out.writeInt(outgoingRepresentation.length);
+            out.write(outgoingRepresentation, 0, outgoingRepresentation.length);
+        }
+
     }
 
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+
         this.sessionId = in.readLong();
         this.requestId = in.readLong();
         this.transmitted = in.readBoolean();
+        this.bodyIncluded = in.readBoolean();
         this.protocol = (HttpProtocol)in.readObject();
         this.method = (RequestMethod)in.readObject();
         this.code = in.readInt();
         this.description = (String)in.readObject();
         this.headers = (HeaderValues)in.readObject();
+
+        int incomingRepresentationSize = in.readInt();
+
+        if (incomingRepresentationSize == -1) {
+            this.byteRepresentation = null;
+        } else {
+            this.byteRepresentation = new byte[incomingRepresentationSize];
+            int progress = 0;
+
+            while (true) {
+                int bytesRead = in.read(this.byteRepresentation, progress, incomingRepresentationSize - progress);
+
+                if (incomingRepresentationSize - progress - bytesRead == 0) {
+                    break;
+                } else {
+                    progress = progress + bytesRead;
+                }
+            }
+        }
+
     }
 
     public Response() {}
@@ -54,6 +93,7 @@ public class Response implements Externalizable, ResponseMessage {
         this.method = method;
         this.headers = new HeaderValues(true);
         this.transmitted = false;
+        this.bodyIncluded = true;
     }
 
     public Response(long sessionId, HttpProtocol protocol, RequestMethod method) {
@@ -81,6 +121,14 @@ public class Response implements Externalizable, ResponseMessage {
 
     public void setTransmitted(boolean transmitted) {
         this.transmitted = transmitted;
+    }
+
+    public boolean isBodyIncluded() {
+        return bodyIncluded;
+    }
+
+    public void setBodyIncluded(boolean bodyIncluded) {
+        this.bodyIncluded = bodyIncluded;
     }
 
     public void removeHeader(String name) {
@@ -171,37 +219,31 @@ public class Response implements Externalizable, ResponseMessage {
 		this.description = description;
 	}
 
-	public byte[] getByteBuffer() {
+    private byte[] createByteRepresentation() {
+        if (this.protocol != HttpProtocol.HTTP0_9) {
+            StringBuilder r = new StringBuilder();
 
-		if (this.protocol != HttpProtocol.HTTP0_9) {
+            r.append("HTTP/1.1 ");
+            r.append(this.code);
+            r.append(" ");
+            r.append(this.description);
+            r.append("\r\n");
+            r.append(this.headers.generateResponse());
+            r.append("\r\n");
 
-			StringBuilder r = new StringBuilder();
-
-			r.append("HTTP/1.1 ");
-			r.append(this.code);
-			r.append(" ");
-			r.append(this.description);
-			r.append("\r\n");
-			r.append(this.headers.generateResponse());
-			r.append("\r\n");
-
-			String s = r.toString();
-			byte bytes[] = null;
-
-			try {
-				bytes = s.getBytes("ISO-8859-1");
-			} catch (UnsupportedEncodingException e) {
-				e.printStackTrace();
-				return null;
-			}
-
-            return bytes;
-
-		}
-        else {
+            String s = r.toString();
+            return s.getBytes(Charset.forName("ISO-8859-1"));
+        } else {
             return null;
         }
+    }
 
+	public byte[] getByteRepresentation() {
+        if (this.byteRepresentation != null) {
+            return this.byteRepresentation;
+        } else {
+            return this.createByteRepresentation();
+        }
 	}
 
 }

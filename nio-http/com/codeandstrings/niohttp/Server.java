@@ -14,7 +14,6 @@ import com.codeandstrings.niohttp.exceptions.tcp.CloseConnectionException;
 import com.codeandstrings.niohttp.handlers.base.RequestHandler;
 import com.codeandstrings.niohttp.handlers.broker.RequestHandlerBroker;
 import com.codeandstrings.niohttp.request.Request;
-import com.codeandstrings.niohttp.response.ResponseContent;
 import com.codeandstrings.niohttp.response.ExceptionResponseFactory;
 import com.codeandstrings.niohttp.response.Response;
 import com.codeandstrings.niohttp.response.ResponseMessage;
@@ -55,7 +54,7 @@ public class Server implements Runnable {
 	private void configureServerSocketChannel() throws IOException {
 		this.serverSocketChannel = ServerSocketChannel.open();
 		this.serverSocketChannel.configureBlocking(false);
-		this.serverSocketChannel.bind(this.socketAddress);
+		this.serverSocketChannel.bind(this.socketAddress, 1024);
 	}
 
 	@Override
@@ -142,19 +141,11 @@ public class Server implements Runnable {
                                 }
 
                             } catch (CloseConnectionException e) {
-
                                 this.sessions.remove(session.getSessionId());
                                 session.getChannel().close();
-
                             } catch (HttpException e) {
-
                                 Response r = (new ExceptionResponseFactory(e)).create(session.getSessionId(), this.parameters);
-
-                                ResponseContent container = new ResponseContent(session.getSessionId(),
-                                        -1, r.getByteBuffer(), true);
-
-                                session.queueMessage(container);
-
+                                session.queueMessage(r);
                             }
 
 						} else if (channel instanceof Pipe.SourceChannel) {

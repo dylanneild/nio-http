@@ -26,6 +26,8 @@ public class ExceptionResponseFactory {
 		r.addHeader("Content-Length", "0");
 		r.addHeader("Connecton", "close");
 
+        r.setBodyIncluded(false);
+
 		return r;
 
 	}

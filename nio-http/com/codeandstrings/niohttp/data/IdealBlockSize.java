@@ -20,5 +20,6 @@ public class IdealBlockSize {
 	}
 
 	public static int VALUE = new IdealBlockSize.ExtendedBufferedOutputStream().bufferSize();
+    public static int MAX_BUFFER = VALUE * 8;
 	
 }
