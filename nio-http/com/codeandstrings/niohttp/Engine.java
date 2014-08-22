@@ -44,18 +44,27 @@ public class Engine extends Thread {
     private LinkedList<Engine$Handler> handlerQueue;
     private ByteBuffer singleByteReception;
 
+    private void configureEngineChannels() {
+        try {
+            this.enginePipe = Pipe.open();
+            this.engineNotificationChannel = this.enginePipe.sink();
+            this.engineReceptionChannel = this.enginePipe.source();
+            this.engineNotificationChannel.configureBlocking(false);
+            this.engineReceptionChannel.configureBlocking(false);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(0);
+        }
+    }
+
 	public Engine() throws IOException {
 		this.parameters = Parameters.getDefaultParameters();
         this.sessions = new HashMap<Long,Session>();
         this.requestHandlerBroker = new RequestHandlerBroker();
         this.socketQueue = new LinkedBlockingQueue<SocketChannel>();
         this.handlerQueue = new LinkedList<>();
-        this.enginePipe  = Pipe.open();
-        this.engineNotificationChannel = this.enginePipe.sink();
-        this.engineReceptionChannel  = this.enginePipe.source();
-        this.engineNotificationChannel.configureBlocking(false);
-        this.engineReceptionChannel.configureBlocking(false);
         this.singleByteReception = ByteBuffer.allocateDirect(1);
+        this.configureEngineChannels();
 	}
 
     public Pipe.SinkChannel getEngineNotificationChannel() {
@@ -96,7 +105,7 @@ public class Engine extends Thread {
             this.engineReceptionChannel.register(selector, SelectionKey.OP_READ);
             this.requestHandlerBroker.setSelectorReadHandler(selector);
 
-            System.out.println("Engine active " + Thread.currentThread().toString());
+            System.out.println("Engine active via " + Thread.currentThread().toString());
 
 			while (true) {
 

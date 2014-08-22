@@ -16,16 +16,18 @@ public class Server implements Runnable {
 	private InetSocketAddress socketAddress;
 	private ServerSocketChannel serverSocketChannel;
     private LinkedList<Engine> engineSchedule;
-    private int concurrency;
     private ByteBuffer singleByteNotification;
+    private int outstandingConnections;
 
 	public Server(int concurrency) {
 
         this.parameters = Parameters.getDefaultParameters();
         this.engineSchedule = new LinkedList<Engine>();
-        this.concurrency = concurrency;
+        this.outstandingConnections = 0;
+
         this.singleByteNotification = ByteBuffer.allocateDirect(1);
         this.singleByteNotification.put((byte)0x1);
+        this.singleByteNotification.flip();
 
         Thread.currentThread().setName("NIO-HTTP Server Thread");
 
@@ -107,21 +109,38 @@ public class Server implements Runnable {
 
                         Pipe.SinkChannel engineChannel = nextEngine.getEngineNotificationChannel();
 
-                        this.singleByteNotification.flip();
+                        this.singleByteNotification.rewind();
+                        this.outstandingConnections++;
 
                         if (engineChannel.write(singleByteNotification) == 0) {
                             engineChannel.register(selector, SelectionKey.OP_WRITE);
+                        } else {
+                            this.outstandingConnections--;
                         }
 
                         this.engineSchedule.add(nextEngine);
 					}
                     else if (key.isWritable()) {
-                        Pipe.SinkChannel engineChannel = (Pipe.SinkChannel)key.channel();
-                        this.singleByteNotification.flip();
 
-                        if (engineChannel.write(singleByteNotification) == 1) {
+                        Pipe.SinkChannel engineChannel = (Pipe.SinkChannel)key.channel();
+                        int j = 0;
+
+                        for (int i = 0; i < this.outstandingConnections; i++) {
+                            this.singleByteNotification.rewind();
+                            if (engineChannel.write(singleByteNotification) == 1) {
+                                j++;
+                            }
+                        }
+
+                        this.outstandingConnections = this.outstandingConnections - j;
+
+                        if (this.outstandingConnections < 0) {
+                            System.out.println("Outstanding connection number under 0.");
+                            System.exit(0);
+                        } else if (this.outstandingConnections == 0) {
                             engineChannel.register(selector, 0);
                         }
+
                     }
 
 					ki.remove();

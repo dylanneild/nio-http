@@ -7,7 +7,7 @@ public class Debug {
 
 	public static void main(String args[]) {
 
-		Server server = new Server(4);
+		Server server = new Server(Runtime.getRuntime().availableProcessors());
         boolean isLocal = false;
 
         if (System.getProperty("os.name") != null && System.getProperty("os.name").equalsIgnoreCase("mac os x")) {
