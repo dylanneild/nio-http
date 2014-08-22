@@ -2,11 +2,21 @@ package com.codeandstrings.niohttp.sessions;
 
 import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.data.Parameters;
+import com.codeandstrings.niohttp.exceptions.http.HttpException;
+import com.codeandstrings.niohttp.exceptions.tcp.CloseConnectionException;
+import com.codeandstrings.niohttp.request.Request;
+import com.codeandstrings.niohttp.response.Response;
+import com.codeandstrings.niohttp.response.ResponseContent;
+import com.codeandstrings.niohttp.response.ResponseMessage;
 
+import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.*;
 
-abstract class Session {
+public abstract class Session {
 
     /*
      * Session ID Management
@@ -26,6 +36,11 @@ abstract class Session {
      */
     protected int maxRequestSize;
 
+    /* Response Management */
+    protected Queue<Request> requestQueue;
+    protected Queue<Response> responseQueue;
+    protected Queue<ResponseContent> contentQueue;
+
     protected Session(SocketChannel channel, Selector selector, Parameters parameters) {
 
         this.sessionId = Session.lastSessionId;
@@ -37,6 +52,11 @@ abstract class Session {
 
         this.maxRequestSize = IdealBlockSize.VALUE;
         this.nextRequestId = 0;
+
+        this.requestQueue = new LinkedList<Request>();
+        this.contentQueue = new LinkedList<ResponseContent>();
+        this.responseQueue = new LinkedList<Response>();
+
     }
 
     public long getSessionId() {
@@ -48,4 +68,53 @@ abstract class Session {
         this.nextRequestId++;
         return r;
     }
+
+    public SocketChannel getChannel() {
+        return this.channel;
+    }
+
+
+    protected void setSelectionRequest(boolean write)
+            throws ClosedChannelException {
+
+        int ops;
+
+        if (write) {
+            ops = SelectionKey.OP_READ | SelectionKey.OP_WRITE;
+        } else {
+            ops = SelectionKey.OP_READ;
+        }
+
+        this.channel.register(this.selector, ops, this);
+
+    }
+
+    public void queueMessage(ResponseMessage message) throws IOException {
+
+        if (message instanceof Response) {
+            this.responseQueue.add((Response)message);
+        } else {
+            this.contentQueue.add((ResponseContent)message);
+        }
+
+        this.setSelectionRequest(true);
+
+    }
+
+    public void removeRequest(Request request) {
+        this.requestQueue.remove(request);
+    }
+
+    public Request getRequest(long requestId) {
+        for (Request r : this.requestQueue) {
+            if (r.getRequestId()==requestId)
+                return r;
+        }
+
+        return null;
+    }
+
+    public abstract void resetHeaderReads();
+    public abstract void socketWriteEvent() throws IOException, CloseConnectionException;
+    public abstract Request socketReadEvent() throws IOException, CloseConnectionException, HttpException;
 }

@@ -14,13 +14,14 @@ import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.file.*;
-import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.ExecutionException;
 
 public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
-    private ArrayList<FileRequestObject> tasks;
+    private Queue<FileRequestObject> tasks;
     private FileSystem fileSystem;
     private MimeTypes mimeTypes;
 
@@ -32,7 +33,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
     public abstract String getDirectoryFooter(Request request);
 
     public BaseFileSystemRequestHandler() {
-        this.tasks = new ArrayList<FileRequestObject>();
+        this.tasks = new LinkedList<FileRequestObject>();
         this.fileSystem = FileSystems.getDefault();
         this.mimeTypes = MimeTypes.getInstance();
     }
@@ -92,14 +93,8 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
     }
 
     private void sendException(HttpException e, Request request, Selector selector) throws ClosedChannelException {
-
-        ExceptionResponseFactory responseFactory = new ExceptionResponseFactory(e);
-        Response response = responseFactory.create(request.getServerParameters());
-        ResponseContent container = new ResponseContent(request.getSessionId(), request.getRequestId(), response.getByteBuffer(), true);
-
-        this.sendBufferContainer(container);
+        this.sendResponse(ResponseFactory.createResponse(e, request));
         this.scheduleWrites(selector);
-
     }
 
     private void serviceDirectoryRequest(Path path, Request request, Selector selector) throws Exception {
@@ -127,8 +122,8 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
         StringResponseFactory factory = new StringResponseFactory(request, "text/html", html.toString());
 
-        this.sendBufferContainer(factory.getHeader());
-        this.sendBufferContainer(factory.getBody());
+        this.sendResponse(factory.getHeader());
+        this.sendResponse(factory.getBody());
 
         this.scheduleWrites(selector);
 
@@ -174,10 +169,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             BaseFileSystemRequestHandler.addFileInformationToRequest(task, r);
         }
 
-        ResponseContent responseHeader = new ResponseContent(request.getSessionId(), request.getRequestId(),
-                r.getByteBuffer(), (skipBody || notModified));
-
-        this.sendBufferContainer(responseHeader);
+        this.sendResponse(r);
 
         // if this is a HEAD request, don't bother sending back content
         // otherwise, schedule this new task for later
@@ -202,7 +194,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
         // there are no further write events to execute;
         // let's see if there are more file read events to refill the buffers
-        FileRequestObject task = this.tasks.size() > 0 ? this.tasks.remove(0) : null;
+        FileRequestObject task = this.tasks.poll();
 
         if (task == null) {
             return false;
@@ -239,7 +231,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             ResponseContent responseContent = new ResponseContent(task.getSessionId(),
                     task.getRequestId(), content, finalBuffer);
 
-            this.sendBufferContainer(responseContent);
+            this.sendResponse(responseContent);
 
             if (finalBuffer) {
                 task.close();

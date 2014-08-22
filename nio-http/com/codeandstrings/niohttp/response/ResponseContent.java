@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
-public class ResponseContent implements Externalizable {
+public class ResponseContent implements Externalizable, ResponseMessage {
 
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {
@@ -68,6 +68,7 @@ public class ResponseContent implements Externalizable {
 		this.buffer = buffer;
 	}
 
+    @Override
     public long getSessionId() {
         return bufferHeader.getSessionId();
     }
@@ -80,6 +81,7 @@ public class ResponseContent implements Externalizable {
         bufferHeader.setSessionId(sessionId);
     }
 
+    @Override
     public long getRequestId() {
         return bufferHeader.getRequestId();
     }

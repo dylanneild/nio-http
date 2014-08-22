@@ -4,6 +4,7 @@ import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
+import com.codeandstrings.niohttp.request.Request;
 
 public class ExceptionResponseFactory {
 
@@ -14,9 +15,9 @@ public class ExceptionResponseFactory {
 		this.e = e;
 	} 
 	
-	public Response create(Parameters parameters) {
+	public Response create(long sessionId, Parameters parameters) {
 		
-		Response r = new Response(HttpProtocol.HTTP1_1, RequestMethod.GET);
+		Response r = new Response(sessionId, HttpProtocol.HTTP1_1, RequestMethod.GET);
 
 		r.setCode(this.e.getCode());
 		r.setDescription(this.e.getDescription());
@@ -24,6 +25,8 @@ public class ExceptionResponseFactory {
         r.addHeader("Vary", "Accept-Encoding");
 		r.addHeader("Content-Length", "0");
 		r.addHeader("Connecton", "close");
+
+        r.setBodyIncluded(false);
 
 		return r;
 

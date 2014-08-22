@@ -53,7 +53,7 @@ public class ResponseFactory {
             return null;
         }
 
-        Response r = new Response(protocol, method);
+        Response r = new Response(request, protocol, method);
 
         r.setCode(304);
         r.setDescription("Not Modified");
@@ -70,6 +70,8 @@ public class ResponseFactory {
             r.addHeader("Connection", "close");
         }
 
+        r.setBodyIncluded(false);
+
         return r;
     }
 
@@ -78,21 +80,19 @@ public class ResponseFactory {
         HttpProtocol protocol = request.getRequestProtocol();
         RequestMethod requestMethod = request.getRequestMethod();
 
-        Response r = new Response(protocol, requestMethod);
+        Response r = new Response(request, protocol, requestMethod);
 
-        if (protocol != HttpProtocol.HTTP0_9) {
-            r.setCode(200);
-            r.setDescription("OK");
-            r.addHeader("Date", DateUtils.getRfc822DateStringGMT(new Date()));
-            r.addHeader("Server", request.getServerParameters().getServerString());
+        r.setCode(200);
+        r.setDescription("OK");
+        r.addHeader("Date", DateUtils.getRfc822DateStringGMT(new Date()));
+        r.addHeader("Server", request.getServerParameters().getServerString());
 
-            ResponseFactory.addVaryTransferEncoding(r);
+        ResponseFactory.addVaryTransferEncoding(r);
 
-            if (request.isKeepAlive()) {
-                r.addHeader("Connection", "keep-alive");
-            } else {
-                r.addHeader("Connection", "close");
-            }
+        if (request.isKeepAlive()) {
+            r.addHeader("Connection", "keep-alive");
+        } else {
+            r.addHeader("Connection", "close");
         }
 
         return r;
@@ -123,19 +123,15 @@ public class ResponseFactory {
         HttpProtocol protocol = request.getRequestProtocol();
         Response r = createBasicResponse(request);
 
-        if (protocol != HttpProtocol.HTTP0_9) {
-            r.setCode(200);
-            r.setDescription("OK");
-            r.addHeader("Content-Type", contentType);
-            r.addHeader("Content-Length", String.valueOf(contentSize));
-        }
+        r.addHeader("Content-Type", contentType);
+        r.addHeader("Content-Length", String.valueOf(contentSize));
 
         return r;
 
     }
 
-	public static Response createResponse(HttpException e, Parameters parameters) {
-		return (new ExceptionResponseFactory(e)).create(parameters);
+	public static Response createResponse(HttpException e, Request request) {
+		return (new ExceptionResponseFactory(e)).create(request.getSessionId(), request.getServerParameters());
 	}
 
 }

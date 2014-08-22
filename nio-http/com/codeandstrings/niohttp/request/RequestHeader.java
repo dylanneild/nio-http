@@ -67,7 +67,7 @@ public class RequestHeader implements Externalizable {
 		return headers.getRequestContentType();
 	}
 	
-	public Set<String> getHeaderNames() {
+	public List<String> getHeaderNames() {
 		return this.headers.getNames();
 	}
 

@@ -14,22 +14,23 @@ import com.codeandstrings.niohttp.exceptions.tcp.CloseConnectionException;
 import com.codeandstrings.niohttp.handlers.base.RequestHandler;
 import com.codeandstrings.niohttp.handlers.broker.RequestHandlerBroker;
 import com.codeandstrings.niohttp.request.Request;
-import com.codeandstrings.niohttp.response.ResponseContent;
 import com.codeandstrings.niohttp.response.ExceptionResponseFactory;
 import com.codeandstrings.niohttp.response.Response;
+import com.codeandstrings.niohttp.response.ResponseMessage;
 import com.codeandstrings.niohttp.sessions.HttpSession;
+import com.codeandstrings.niohttp.sessions.Session;
 
 public class Server implements Runnable {
 
 	private Parameters parameters;
 	private InetSocketAddress socketAddress;
 	private ServerSocketChannel serverSocketChannel;
-    private HashMap<Long,HttpSession> sessions;
+    private HashMap<Long,Session> sessions;
     private RequestHandlerBroker requestHandlerBroker;
 
 	public Server() {
 		this.parameters = Parameters.getDefaultParameters();
-        this.sessions = new HashMap<Long,HttpSession>();
+        this.sessions = new HashMap<Long,Session>();
         this.requestHandlerBroker = new RequestHandlerBroker();
         Thread.currentThread().setName("NIO-HTTP Selection Thread");
 	}
@@ -53,7 +54,7 @@ public class Server implements Runnable {
 	private void configureServerSocketChannel() throws IOException {
 		this.serverSocketChannel = ServerSocketChannel.open();
 		this.serverSocketChannel.configureBlocking(false);
-		this.serverSocketChannel.bind(this.socketAddress);
+		this.serverSocketChannel.bind(this.socketAddress, 1024);
 	}
 
 	@Override
@@ -125,7 +126,7 @@ public class Server implements Runnable {
 
                                 if (request != null) {
 
-                                    session.reset();
+                                    session.resetHeaderReads();
 
                                     RequestHandler requestHandler = this.requestHandlerBroker.getHandlerForRequest(request);
 
@@ -140,19 +141,11 @@ public class Server implements Runnable {
                                 }
 
                             } catch (CloseConnectionException e) {
-
                                 this.sessions.remove(session.getSessionId());
                                 session.getChannel().close();
-
                             } catch (HttpException e) {
-
-                                Response r = (new ExceptionResponseFactory(e)).create(this.parameters);
-
-                                ResponseContent container = new ResponseContent(session.getSessionId(),
-                                        -1, r.getByteBuffer(), true);
-
-                                session.queueBuffer(container);
-
+                                Response r = (new ExceptionResponseFactory(e)).create(session.getSessionId(), this.parameters);
+                                session.queueMessage(r);
                             }
 
 						} else if (channel instanceof Pipe.SourceChannel) {
@@ -165,13 +158,13 @@ public class Server implements Runnable {
                                 key.attach(requestHandler);
                             }
 
-                            ResponseContent container = requestHandler.executeBufferReadEvent();
+                            ResponseMessage container = requestHandler.executeBufferReadEvent();
 
                             if (container != null) {
-                                HttpSession session = this.sessions.get(container.getSessionId());
+                                Session session = this.sessions.get(container.getSessionId());
 
                                 if (session != null) {
-                                    session.queueBuffer(container);
+                                    session.queueMessage(container);
                                 }
                             }
 
@@ -194,7 +187,7 @@ public class Server implements Runnable {
                             try {
                                 session.socketWriteEvent();
                             }
-                            catch (CloseConnectionException e) {
+                            catch (Exception e) {
                                 this.sessions.remove(session.getSessionId());
                                 session.getChannel().close();
                             }

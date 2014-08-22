@@ -11,10 +11,10 @@ public class StringResponseFactory {
     private String contentType;
     private String response;
 
-    private ResponseContent header;
+    private Response header;
     private ResponseContent body;
 
-    public ResponseContent getHeader() {
+    public Response getHeader() {
         return header;
     }
 
@@ -23,20 +23,12 @@ public class StringResponseFactory {
     }
 
     private void fabricateHeader() {
-
-        Response r = ResponseFactory.createResponse(this.contentType, this.body.getBuffer().length, this.request);
-
-        if (r.getByteBuffer() != null) {
-            this.header = new ResponseContent(this.request.getSessionId(), this.request.getRequestId(), r.getByteBuffer(), false);
-        }
-
+        this.header = ResponseFactory.createResponse(this.contentType, this.body.getBuffer().length, this.request);
     }
 
     private void fabricateBody() {
-
         byte bytes[] = this.response.getBytes(Charset.forName("UTF-8"));
         this.body = new ResponseContent(this.request.getSessionId(), this.request.getRequestId(), bytes, true);
-
     }
 
     private void fabricate() {

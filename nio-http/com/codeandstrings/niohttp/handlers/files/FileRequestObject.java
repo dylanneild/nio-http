@@ -110,7 +110,7 @@ class FileRequestObject {
         // TODO: Into the parameters system somehow down the line might be of
         // TODO: value.
 
-        this.readBuffer = ByteBuffer.allocate(IdealBlockSize.VALUE * 8);
+        this.readBuffer = ByteBuffer.allocate(IdealBlockSize.MAX_BUFFER);
         this.future = this.fileChannel.read(this.readBuffer, position);
     }
 

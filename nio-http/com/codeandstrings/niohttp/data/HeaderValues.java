@@ -127,15 +127,31 @@ public class HeaderValues implements Externalizable {
 		
 	}
 	
-	public Set<String> getNames() {
-		
-		HashSet<String> h = new HashSet<String>();
-		
+	public List<String> getNames() {
+
+        LinkedList<String> r = new LinkedList<String>();
+        boolean f;
+        String currentName;
+
 		for (NameValuePair pair : this.headers) {
-			h.add(pair.getName());
+
+            f = false;
+            currentName = pair.getName();
+
+            for (String loop : r) {
+                if (loop.equals(currentName)) {
+                    f = true;
+                    break;
+                }
+            }
+
+            if (!f) {
+                r.add(currentName);
+            }
+
 		}
 		
-		return h;
+		return r;
 		
 	}
 	

@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
@@ -17,6 +16,7 @@ import com.codeandstrings.niohttp.exceptions.tcp.CloseConnectionException;
 import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.request.RequestBodyFactory;
 import com.codeandstrings.niohttp.request.RequestHeaderFactory;
+import com.codeandstrings.niohttp.response.Response;
 import com.codeandstrings.niohttp.response.ResponseContent;
 
 class HttpSession$Line {
@@ -33,10 +33,12 @@ class HttpSession$Line {
 
     @Override
     public String toString() {
-        return "HttpSession$Line [line=" + line + ", start=" + start
-                + ", nextStart=" + nextStart + "]";
+        return "HttpSession$Line{" +
+                "line='" + line + '\'' +
+                ", start=" + start +
+                ", nextStart=" + nextStart +
+                '}';
     }
-
 }
 
 public class HttpSession extends Session {
@@ -55,10 +57,7 @@ public class HttpSession extends Session {
     private ByteBuffer writeBuffer;
     private boolean writeBufferLastPacket;
     private Request writeRequest;
-
-    /* Response Management */
-    private ArrayList<Request> requestQueue;
-    private ArrayList<ResponseContent> outputQueue;
+    private Response writeResponse;
 
     /**
      * Constructor for a new HTTP session.
@@ -67,17 +66,13 @@ public class HttpSession extends Session {
      * @param selector The NIO selector this channel interacts with.
      */
     public HttpSession(SocketChannel channel, Selector selector, Parameters parameters) {
-
         super(channel, selector, parameters);
-
-        this.readBuffer = ByteBuffer.allocate(128);
-        this.outputQueue = new ArrayList<ResponseContent>();
-        this.requestQueue = new ArrayList<Request>();
-
-        this.reset();
+        this.readBuffer = ByteBuffer.allocateDirect(1024);
+        this.resetHeaderReads();
     }
 
-    public void reset() {
+    @Override
+    public void resetHeaderReads() {
         this.requestHeaderData = new byte[maxRequestSize];
         this.requestHeaderMarker = 0;
         this.requestHeaderLines = new ArrayList<HttpSession$Line>();
@@ -86,15 +81,6 @@ public class HttpSession extends Session {
         this.bodyReadBegun = false;
         this.bodyFactory = new RequestBodyFactory();
         this.readBuffer.clear();
-    }
-
-    public void queueBuffer(ResponseContent container) throws IOException {
-        this.outputQueue.add(container);
-        this.setSelectionRequest(true);
-    }
-
-    public SocketChannel getChannel() {
-        return this.channel;
     }
 
     private Request generateAndHandleRequest() throws IOException {
@@ -115,12 +101,12 @@ public class HttpSession extends Session {
     }
 
     private Request storeAndReturnRequest(Request request) {
-        this.requestQueue.add(request);
-        return request;
-    }
 
-    public void removeRequest(Request request) {
-        this.requestQueue.remove(request);
+        if (request != null) {
+            this.requestQueue.add(request);
+        }
+
+        return request;
     }
 
     private Request analyzeForHeader() throws HttpException, IOException {
@@ -135,7 +121,7 @@ public class HttpSession extends Session {
         if (this.requestHeaderLines.size() == 0)
             return null;
 
-        // reset our factory
+        // resetHeaderReads our factory
         this.headerFactory.reset();
 
         // walk the received header lines.
@@ -206,43 +192,7 @@ public class HttpSession extends Session {
 
     }
 
-    private void setSelectionRequest(boolean write)
-            throws ClosedChannelException {
-
-        int ops;
-
-        if (write) {
-            ops = SelectionKey.OP_READ | SelectionKey.OP_WRITE;
-        } else {
-            ops = SelectionKey.OP_READ;
-        }
-
-        this.channel.register(this.selector, ops, this);
-
-    }
-
-    private final void clearWriteOperations() {
-        if (this.writeBufferLastPacket) {
-            this.writeRequest = null;
-            this.writeBufferLastPacket = false;
-        }
-
-        this.writeBuffer = null;
-    }
-
-    private final boolean hasWriteEventQueued() {
-        if (this.writeBuffer != null) {
-            if (this.writeBuffer.hasRemaining()) {
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            return false;
-        }
-    }
-
-    private final void socketResponseConcluded() throws CloseConnectionException {
+    private final boolean socketWriteConditionalClose() {
 
         boolean shouldClose = true;
 
@@ -254,72 +204,161 @@ public class HttpSession extends Session {
             shouldClose = false;
         }
 
-        this.clearWriteOperations();
+        return shouldClose;
 
-        if (shouldClose) {
-            throw new CloseConnectionException();
-        }
     }
 
-    private final void socketWriteEventExecute() throws IOException, CloseConnectionException {
+    private final void socketWritePartialClear() {
+        this.writeBuffer = null;
+        this.writeBufferLastPacket = false;
+    }
 
+    private final void socketWriteFullClear() throws ClosedChannelException {
+
+        this.socketWritePartialClear();
+
+        this.writeRequest = null;
+        this.writeResponse = null;
+
+        if (this.responseQueue.size() == 0) {
+            this.setSelectionRequest(false);
+        }
+
+    }
+
+    private final void socketWriteExecute() throws IOException, CloseConnectionException {
+
+        // write the present buffer
         this.channel.write(this.writeBuffer);
 
         if (!this.writeBuffer.hasRemaining()) {
-            this.socketResponseConcluded();
-        }
 
-    }
-
-    private final void covertResponseContentToQueue(ResponseContent responseContent) {
-        this.writeBuffer = ByteBuffer.wrap(responseContent.getBuffer());
-        this.writeBufferLastPacket = responseContent.isLastBufferForRequest();
-    }
-
-    private final void queueNextWriteEvent() throws ClosedChannelException {
-
-        if (this.outputQueue.size() == 0) {
-            this.setSelectionRequest(false);
-            return;
-        }
-
-        if (this.writeRequest == null) {
-            if (this.requestQueue.size() > 0) {
-                this.writeRequest = this.requestQueue.remove(0);
-            }
-        }
-
-        if (this.writeRequest == null) {
-            this.covertResponseContentToQueue(this.outputQueue.remove(0));
-            return;
-        } else {
-            Iterator<ResponseContent> iterator = this.outputQueue.iterator();
-
-            while (iterator.hasNext()) {
-                ResponseContent responseContent = iterator.next();
-
-                if (responseContent.getRequestId() == this.writeRequest.getRequestId()) {
-                    this.covertResponseContentToQueue(responseContent);
-                    iterator.remove();
-                    return;
+            if (this.socketWriteConditionalClose()) {
+                this.socketWriteFullClear();
+                throw new CloseConnectionException();
+            } else {
+                if (this.writeBufferLastPacket) {
+                    this.socketWriteFullClear();
+                } else {
+                    this.socketWritePartialClear();
                 }
             }
-        }
 
-        if (!this.hasWriteEventQueued()) {
-            this.setSelectionRequest(false);
         }
 
     }
 
-    public void socketWriteEvent() throws IOException, CloseConnectionException {
-        if (this.hasWriteEventQueued()) {
-            this.socketWriteEventExecute();
+    private final boolean socketWriteReady() {
+        if (this.writeBuffer == null) {
+            return false;
+        }
+        else if (!this.writeBuffer.hasRemaining()) {
+            return false;
+        }
+        else {
+            return true;
+        }
+    }
+
+    private final void socketWriteResponseToBuffer(Response r) {
+
+
+        byte bytes[] = r.getByteRepresentation();
+
+        if (bytes != null) {
+            this.writeBuffer = ByteBuffer.wrap(bytes);
+
+            if (!r.isBodyIncluded()) {
+                this.writeBufferLastPacket = true;
+            }
+        }
+
+    }
+
+    private final boolean socketWriteQueueBadRequest() {
+        if (this.requestQueue.size() == 0 && this.responseQueue.size() > 0) {
+            this.writeResponse = this.responseQueue.poll();
+            this.socketWriteResponseToBuffer(this.writeResponse);
+            return true;
         } else {
-            queueNextWriteEvent();
+            return false;
         }
     }
 
+    private final void socketWriteQueueInitial() throws ClosedChannelException {
+
+        this.writeRequest = this.requestQueue.peek();
+
+        // if there is no present request, we're done
+        if (this.writeRequest == null) {
+            this.setSelectionRequest(false);
+            return;
+        }
+
+        // get the response object - this will always be here because
+        // you can't get this trigger without having a response object
+        for (Iterator<Response> itr = this.responseQueue.iterator(); itr.hasNext(); ) {
+
+            Response r = itr.next();
+
+            if (r.getRequestId() == this.writeRequest.getRequestId()) {
+                this.writeResponse = r;
+                itr.remove();
+                break;
+            }
+
+        }
+
+        if (this.writeResponse == null) {
+            this.setSelectionRequest(false);
+            return;
+        }
+
+        this.writeRequest = this.requestQueue.poll();
+        this.socketWriteResponseToBuffer(this.writeResponse);
+
+    }
+
+    private final void socketWriteConvertResponseContent(ResponseContent responseContent) {
+        this.writeBufferLastPacket = responseContent.isLastBufferForRequest();
+        this.writeBuffer = ByteBuffer.wrap(responseContent.getBuffer());
+    }
+
+    private final void socketWriteQueueAdditional() throws ClosedChannelException {
+
+        Iterator<ResponseContent> iterator = this.contentQueue.iterator();
+
+        while (iterator.hasNext()) {
+            ResponseContent responseContent = iterator.next();
+            if (responseContent.getRequestId() == this.writeRequest.getRequestId()) {
+                this.socketWriteConvertResponseContent(responseContent);
+                iterator.remove();
+                break;
+            }
+        }
+
+    }
+
+    private final void socketWriteQueueNext() throws ClosedChannelException {
+        if (this.writeRequest == null) {
+            if (!this.socketWriteQueueBadRequest()) {
+                this.socketWriteQueueInitial();
+            }
+        } else {
+            this.socketWriteQueueAdditional();
+        }
+    }
+
+    @Override
+    public void socketWriteEvent() throws IOException, CloseConnectionException {
+        if (this.socketWriteReady()) {
+            this.socketWriteExecute();
+        } else {
+            this.socketWriteQueueNext();
+        }
+    }
+
+    @Override
     public Request socketReadEvent() throws IOException, CloseConnectionException, HttpException {
 
         try {
@@ -343,7 +382,7 @@ public class HttpSession extends Session {
                     this.bodyFactory.addBytes(bytes);
 
                     if (this.bodyFactory.isFull()) {
-                        return this.generateAndHandleRequest();
+                        return this.storeAndReturnRequest(this.generateAndHandleRequest());
                     } else {
                         return null;
                     }
