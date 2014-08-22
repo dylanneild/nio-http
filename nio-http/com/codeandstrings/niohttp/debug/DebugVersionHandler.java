@@ -9,11 +9,6 @@ import java.util.Properties;
 public class DebugVersionHandler extends StringRequestHandler {
 
     @Override
-    public int getConcurrency() {
-        return 1;
-    }
-
-    @Override
     public String getContentType() {
         return "text/plain";
     }

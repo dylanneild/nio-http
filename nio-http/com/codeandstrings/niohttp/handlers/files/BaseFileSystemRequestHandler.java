@@ -38,11 +38,6 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
         this.mimeTypes = MimeTypes.getInstance();
     }
 
-    @Override
-    public final int getConcurrency() {
-        return 1;
-    }
-
     private Path getRatifiedFilePath(String requestUri) throws BadRequestException, ForbiddenException, NotFoundException {
 
         String decoded = null;

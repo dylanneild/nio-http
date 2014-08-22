@@ -57,7 +57,7 @@ public abstract class RequestHandler implements Runnable {
 
     public void startThread() {
         this.handlerThread = new Thread(this);
-        this.handlerThread.setName("NIO-HTTP Handler Thread: " + this.getHandlerDescription());
+        this.handlerThread.setName("NIO-HTTP Handler Thread: " + this.getHandlerDescription() + " " + Thread.currentThread());
         this.handlerThread.start();
     }
 
@@ -108,10 +108,6 @@ public abstract class RequestHandler implements Runnable {
 
     protected SelectableChannel getHandlerWriteChannel() {
         return this.handlerSink;
-    }
-
-    public int getConcurrency() {
-        return 1;
     }
 
 }

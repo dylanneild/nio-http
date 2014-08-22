@@ -12,11 +12,6 @@ public class DebugRootHandler extends StringRequestHandler {
     private static int hits = 0;
 
     @Override
-    public int getConcurrency() {
-        return 2;
-    }
-
-    @Override
     public String handleRequest(Request request) {
 
         hits++;
@@ -31,7 +26,7 @@ public class DebugRootHandler extends StringRequestHandler {
 
         r.append("<h1>NIO-HTTP Debug Page - " + this.hits + "</h1>\n");
 
-        r.append("<p><b>Serving instance: </b>" + this.toString() + "<br>");
+        r.append("<p><b>Serving instance: </b>" + this.toString() + " " + Thread.currentThread() + " <br>");
         r.append("<b>Your IP: </b>");
         r.append(request.getRemoteAddr());
         r.append("<br>");

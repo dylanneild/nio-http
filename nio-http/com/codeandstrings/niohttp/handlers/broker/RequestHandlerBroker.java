@@ -91,28 +91,12 @@ public class RequestHandlerBroker {
 
         try {
 
-            RequestHandler testHandler = (RequestHandler)handler.newInstance();
+            RequestHandler newHandler = (RequestHandler) handler.newInstance();
+            RequestHandlerMount mount = new RequestHandlerMount(path, newHandler);
 
-            /**
-             * Handlers with less than 0 concurrency aren't support.
-             * In future we'll throw an InlineHandlerException for handlers with -1
-             * concurrency as these will be handled inline by the actual engine
-             * core. Useful for things like version dumps, stats dumps, etc - anything
-             * that takes no time to crunch and can just be in-lined.
-             */
-            if (testHandler.getConcurrency() < 1)
-                return;
+            newHandler.startThread();
 
-            for (int i = 0; i < testHandler.getConcurrency(); i++) {
-
-                RequestHandler newHandler = (RequestHandler)handler.newInstance();
-                RequestHandlerMount mount = new RequestHandlerMount(path, newHandler);
-
-                newHandler.startThread();
-                this.handlers.add(mount);
-
-            }
-
+            this.handlers.add(mount);
 
         } catch (InstantiationException e) {
             throw new InvalidHandlerException(e);
