@@ -9,6 +9,16 @@ public class Parameters implements Externalizable {
 
     private static final long serialVersionUID = 9070633037021307477L;
 
+    public Parameters copy() {
+        Parameters r = new Parameters();
+        r.port = this.port;
+        r.serverString = String.valueOf(this.serverString);
+        r.serverIp = String.valueOf(this.serverIp);
+        r.maximumPostSize = this.maximumPostSize;
+        r.connectionBacklog = this.connectionBacklog;
+        return r;
+    }
+
     private int port;
 	private String serverString;
 	private String serverIp;
@@ -47,11 +57,9 @@ public class Parameters implements Externalizable {
 		return r;
 	}
 
-	public Parameters() {
-		this.configureDefaultParameters();
-	}
+	public Parameters() {}
 
-	public Parameters(int port) {
+    public Parameters(int port) {
         this.configureDefaultParameters();
         this.port = port;
 	}

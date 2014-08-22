@@ -5,9 +5,10 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.Iterator;
-import java.util.LinkedList;
 
 import com.codeandstrings.niohttp.data.Parameters;
+import com.codeandstrings.niohttp.exceptions.EngineInitException;
+import com.codeandstrings.niohttp.exceptions.InsufficientConcurrencyException;
 import com.codeandstrings.niohttp.exceptions.InvalidHandlerException;
 
 public class Server implements Runnable {
@@ -15,30 +16,34 @@ public class Server implements Runnable {
 	private Parameters parameters;
 	private InetSocketAddress socketAddress;
 	private ServerSocketChannel serverSocketChannel;
-    private LinkedList<Engine> engineSchedule;
+    private Engine[] engineSchedule;
     private ByteBuffer singleByteNotification;
+    private int engineConcurrency;
+    private int enginePointer;
     private int outstandingConnections;
 
-	public Server(int concurrency) {
+	public Server(int concurrency) throws InsufficientConcurrencyException, EngineInitException {
+
+        if (concurrency < 1) {
+            throw new InsufficientConcurrencyException();
+        }
 
         this.parameters = Parameters.getDefaultParameters();
-        this.engineSchedule = new LinkedList<Engine>();
+        this.engineSchedule = new Engine[concurrency];
         this.outstandingConnections = 0;
 
         this.singleByteNotification = ByteBuffer.allocateDirect(1);
         this.singleByteNotification.put((byte)0x1);
         this.singleByteNotification.flip();
 
-        Thread.currentThread().setName("NIO-HTTP Server Thread");
+        this.engineConcurrency = concurrency;
+        this.enginePointer = 0;
 
-        try {
-            for (int i = 0; i < concurrency; i++) {
-                engineSchedule.add(new Engine());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(-1);
+        for (int i = 0; i < this.engineConcurrency; i++) {
+            this.engineSchedule[i] = new Engine(this.parameters);
         }
+
+        Thread.currentThread().setName("NIO-HTTP Server Thread");
 
     }
 
@@ -69,11 +74,12 @@ public class Server implements Runnable {
 	@Override
 	public void run() {
 
+        /* start engine threads */
         for (Engine engine : this.engineSchedule) {
             engine.start();
         }
 
-		try {
+        try {
 
 			this.configureSocketAddress();
 			this.configureServerSocketChannel();
@@ -99,18 +105,16 @@ public class Server implements Runnable {
 					if (key.isAcceptable()) {
 
 						/*
-						 * Accept a connection register it as non-blocking and
-						 * part of the master selector's selection chain (for
-						 * OP_READ functions).
+						 * Accept a connection...
 						 */
 						SocketChannel connection = ((ServerSocketChannel) key.channel()).accept();
-                        Engine nextEngine = this.engineSchedule.poll();
-                        nextEngine.getSocketQueue().add(connection);
-
+                        Engine nextEngine = this.engineSchedule[this.enginePointer];
                         Pipe.SinkChannel engineChannel = nextEngine.getEngineNotificationChannel();
 
                         this.singleByteNotification.rewind();
                         this.outstandingConnections++;
+
+                        nextEngine.getSocketQueue().add(connection);
 
                         if (engineChannel.write(singleByteNotification) == 0) {
                             engineChannel.register(selector, SelectionKey.OP_WRITE);
@@ -118,7 +122,12 @@ public class Server implements Runnable {
                             this.outstandingConnections--;
                         }
 
-                        this.engineSchedule.add(nextEngine);
+                        this.enginePointer++;
+
+                        if (this.enginePointer==this.engineConcurrency) {
+                            this.enginePointer=0;
+                        }
+
 					}
                     else if (key.isWritable()) {
 
@@ -135,7 +144,7 @@ public class Server implements Runnable {
                         this.outstandingConnections = this.outstandingConnections - j;
 
                         if (this.outstandingConnections < 0) {
-                            System.out.println("Outstanding connection number under 0.");
+                            System.err.println("Outstanding connection number under 0 (fatal/strange)");
                             System.exit(0);
                         } else if (this.outstandingConnections == 0) {
                             engineChannel.register(selector, 0);

@@ -1,6 +1,7 @@
 package com.codeandstrings.niohttp;
 
 import com.codeandstrings.niohttp.data.Parameters;
+import com.codeandstrings.niohttp.exceptions.EngineInitException;
 import com.codeandstrings.niohttp.exceptions.InvalidHandlerException;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
 import com.codeandstrings.niohttp.exceptions.http.NotFoundException;
@@ -19,52 +20,43 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.concurrent.LinkedBlockingQueue;
-
-class Engine$Handler {
-    public String path;
-    public Class handler;
-
-    Engine$Handler(String path, Class handler) {
-        this.path = path;
-        this.handler = handler;
-    }
-}
 
 public class Engine extends Thread {
 
-    private Pipe enginePipe;
-    private Pipe.SinkChannel engineNotificationChannel;
-    private Pipe.SourceChannel engineReceptionChannel;
 	private Parameters parameters;
     private HashMap<Long,Session> sessions;
     private RequestHandlerBroker requestHandlerBroker;
     private LinkedBlockingQueue<SocketChannel> socketQueue;
-    private LinkedList<Engine$Handler> handlerQueue;
     private ByteBuffer singleByteReception;
 
-    private void configureEngineChannels() {
-        try {
-            this.enginePipe = Pipe.open();
-            this.engineNotificationChannel = this.enginePipe.sink();
-            this.engineReceptionChannel = this.enginePipe.source();
-            this.engineNotificationChannel.configureBlocking(false);
-            this.engineReceptionChannel.configureBlocking(false);
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(0);
-        }
+    private Pipe enginePipe;
+    private Pipe.SinkChannel engineNotificationChannel;
+    private Pipe.SourceChannel engineReceptionChannel;
+
+
+    private void configureEngineChannels() throws IOException{
+        this.enginePipe = Pipe.open();
+        this.engineNotificationChannel = this.enginePipe.sink();
+        this.engineReceptionChannel = this.enginePipe.source();
+        this.engineNotificationChannel.configureBlocking(false);
+        this.engineReceptionChannel.configureBlocking(false);
     }
 
-	public Engine() throws IOException {
-		this.parameters = Parameters.getDefaultParameters();
+	public Engine(Parameters parameters) throws EngineInitException {
+
+        this.parameters = parameters.copy();
         this.sessions = new HashMap<Long,Session>();
         this.requestHandlerBroker = new RequestHandlerBroker();
-        this.socketQueue = new LinkedBlockingQueue<SocketChannel>();
-        this.handlerQueue = new LinkedList<>();
+        this.socketQueue = new LinkedBlockingQueue<>();
         this.singleByteReception = ByteBuffer.allocateDirect(1);
-        this.configureEngineChannels();
+
+        try {
+            this.configureEngineChannels();
+        } catch (IOException e) {
+            throw new EngineInitException(e);
+        }
+
 	}
 
     public Pipe.SinkChannel getEngineNotificationChannel() {
@@ -75,28 +67,14 @@ public class Engine extends Thread {
         return socketQueue;
     }
 
-    public void setParameters(Parameters parameters) {
-		this.parameters = parameters;
-	}
-
 	public void addRequestHandler(String path, Class handler) throws InvalidHandlerException {
-        this.handlerQueue.add(new Engine$Handler(path, handler));
+        this.requestHandlerBroker.addHandler(path, handler);
 	}
 
 	@Override
 	public void run() {
 
-
         Thread.currentThread().setName("NIO-HTTP Engine Thread " + Thread.currentThread().getId());
-
-        while (this.handlerQueue.size() > 0) {
-            Engine$Handler nextHandler = this.handlerQueue.poll();
-            try {
-                this.requestHandlerBroker.addHandler(nextHandler.path, nextHandler.handler);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
 
         try {
 
@@ -104,8 +82,6 @@ public class Engine extends Thread {
 
             this.engineReceptionChannel.register(selector, SelectionKey.OP_READ);
             this.requestHandlerBroker.setSelectorReadHandler(selector);
-
-            System.out.println("Engine active via " + Thread.currentThread().toString());
 
 			while (true) {
 
@@ -129,7 +105,7 @@ public class Engine extends Thread {
 
                             this.singleByteReception.clear();
 
-                            if (this.engineReceptionChannel.read(singleByteReception) > 0) {
+                            if (this.engineReceptionChannel.read(singleByteReception) == 1) {
                                 SocketChannel newChannel = this.socketQueue.poll();
 
                                 if (newChannel != null) {
@@ -138,8 +114,7 @@ public class Engine extends Thread {
                                 }
                             }
 
-                        }
-						else if (channel instanceof SocketChannel) {
+                        } else if (channel instanceof SocketChannel) {
 
                             HttpSession session = (HttpSession) key.attachment();
 
