@@ -61,7 +61,7 @@ public class Server implements Runnable {
 	private void configureServerSocketChannel() throws IOException {
 		this.serverSocketChannel = ServerSocketChannel.open();
 		this.serverSocketChannel.configureBlocking(false);
-		this.serverSocketChannel.bind(this.socketAddress, 2048);
+		this.serverSocketChannel.bind(this.socketAddress, this.parameters.getConnectionBacklog());
 	}
 
 	@Override
