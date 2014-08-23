@@ -46,7 +46,9 @@ Then, pass the Class to the server library:
 
 ### Example Server
 
-Demo code is [up and running](http://sky.codeandstrings.com) at and demonstrates the server available and handling requests in it's current state.
+Demo code is [up and running](http://sky.codeandstrings.com) and demonstrates the library available and handling requests in it's current state. This server is a simple 2 CPU [DigitalOcean](http://www.digitalocean.com) droplet and is capable of handling several thousand requests per second using only NIO-HTTP and a few lines of startup code (see: com.codeandstrings.niohttp.debug for example code).  
+
+On 16 CPU compute instances the current version of NIO-HTTP can consume ~1500% CPU power and deliver ~40k requests per second to thousands of connections. Performance continues to increase dramatically as development proceeds.
 
 ### Architecture
 
