@@ -14,57 +14,38 @@ import com.codeandstrings.niohttp.response.Response;
 import com.codeandstrings.niohttp.response.ResponseMessage;
 import com.codeandstrings.niohttp.sessions.HttpSession;
 import com.codeandstrings.niohttp.sessions.Session;
+import com.codeandstrings.niohttp.wire.ChannelQueue;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class Engine extends Thread {
 
 	private Parameters parameters;
     private HashMap<Long,Session> sessions;
     private RequestHandlerBroker requestHandlerBroker;
-    private LinkedBlockingQueue<SocketChannel> socketQueue;
-    private ByteBuffer singleByteReception;
-
-    private Pipe enginePipe;
-    private Pipe.SinkChannel engineNotificationChannel;
-    private Pipe.SourceChannel engineReceptionChannel;
-
-
-    private void configureEngineChannels() throws IOException{
-        this.enginePipe = Pipe.open();
-        this.engineNotificationChannel = this.enginePipe.sink();
-        this.engineReceptionChannel = this.enginePipe.source();
-        this.engineNotificationChannel.configureBlocking(false);
-        this.engineReceptionChannel.configureBlocking(false);
-    }
+    private ChannelQueue channelQueue;
+    private Selector selector;
 
 	public Engine(Parameters parameters) throws EngineInitException {
 
         this.parameters = parameters.copy();
         this.sessions = new HashMap<Long,Session>();
         this.requestHandlerBroker = new RequestHandlerBroker();
-        this.socketQueue = new LinkedBlockingQueue<>();
-        this.singleByteReception = ByteBuffer.allocateDirect(1);
 
         try {
-            this.configureEngineChannels();
+            this.selector = Selector.open();
+            this.channelQueue = new ChannelQueue(this.selector);
         } catch (IOException e) {
             throw new EngineInitException(e);
         }
 
 	}
 
-    public Pipe.SinkChannel getEngineNotificationChannel() {
-        return engineNotificationChannel;
-    }
-
-    public LinkedBlockingQueue<SocketChannel> getSocketQueue() {
-        return socketQueue;
+    public ChannelQueue getEngineChannelQueue() {
+        return this.channelQueue;
     }
 
 	public void addRequestHandler(String path, Class handler) throws InvalidHandlerException {
@@ -78,20 +59,17 @@ public class Engine extends Thread {
 
         try {
 
-			Selector selector = Selector.open();
-
-            this.engineReceptionChannel.register(selector, SelectionKey.OP_READ);
-            this.requestHandlerBroker.setSelectorReadHandler(selector);
+            this.requestHandlerBroker.setSelectorReadHandler(this.selector);
 
 			while (true) {
 
-                int keys = selector.select();
+                int keys = this.selector.select();
 
 				if (keys == 0) {
                     continue;
 				}
 
-				Iterator<SelectionKey> ki = selector.selectedKeys().iterator();
+				Iterator<SelectionKey> ki = this.selector.selectedKeys().iterator();
 
 				while (ki.hasNext()) {
 
@@ -101,16 +79,14 @@ public class Engine extends Thread {
 
 						SelectableChannel channel = key.channel();
 
-                        if (channel == this.engineReceptionChannel) {
+                        if (this.channelQueue.isThisChannel(channel)) {
 
-                            this.singleByteReception.clear();
-
-                            if (this.engineReceptionChannel.read(singleByteReception) == 1) {
-                                SocketChannel newChannel = this.socketQueue.poll();
+                            if (this.channelQueue.shouldReadObject()) {
+                                SocketChannel newChannel = (SocketChannel) this.channelQueue.getNextObject();
 
                                 if (newChannel != null) {
                                     newChannel.configureBlocking(false);
-                                    newChannel.register(selector, SelectionKey.OP_READ);
+                                    newChannel.register(this.selector, SelectionKey.OP_READ);
                                 }
                             }
 
@@ -127,7 +103,7 @@ public class Engine extends Thread {
 								 * session.
 								 */
 								session = new HttpSession((SocketChannel) channel,
-										selector, this.parameters);
+										this.selector, this.parameters);
 
                                 this.sessions.put(session.getSessionId(), session);
                                 key.attach(session);
@@ -149,7 +125,7 @@ public class Engine extends Thread {
                                         throw new NotFoundException();
                                     } else {
                                         requestHandler.sendRequest(request);
-                                        requestHandler.getEngineSink().register(selector, SelectionKey.OP_WRITE);
+                                        requestHandler.getEngineSink().register(this.selector, SelectionKey.OP_WRITE);
                                     }
 
                                 }
@@ -216,7 +192,7 @@ public class Engine extends Thread {
                             // TODO: Faster than this potentially.
 
                             if (!requestHandler.executeRequestWriteEvent()) {
-                                channel.register(selector, 0);
+                                channel.register(this.selector, 0);
                             }
 
                         }

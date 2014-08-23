@@ -94,7 +94,7 @@ public class RequestHandlerBroker {
             RequestHandler newHandler = (RequestHandler) handler.newInstance();
             RequestHandlerMount mount = new RequestHandlerMount(path, newHandler);
 
-            newHandler.startThread();
+            newHandler.start();
 
             this.handlers.add(mount);
 

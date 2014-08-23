@@ -9,7 +9,7 @@ import java.io.*;
 import java.nio.channels.Pipe;
 import java.nio.channels.SelectableChannel;
 
-public abstract class RequestHandler implements Runnable {
+public abstract class RequestHandler extends Thread {
 
     private Pipe aPipe;
     private Pipe bPipe;
@@ -23,8 +23,6 @@ public abstract class RequestHandler implements Runnable {
     private PipeObjectWriter requestWriter;
     private PipeObjectReader responseContentReader;
     private PipeObjectWriter responseContentWriter;
-
-    private Thread handlerThread;
 
     public RequestHandler()  {
 
@@ -53,12 +51,6 @@ public abstract class RequestHandler implements Runnable {
             e.printStackTrace();
             System.exit(-1);
         }
-    }
-
-    public void startThread() {
-        this.handlerThread = new Thread(this);
-        this.handlerThread.setName("NIO-HTTP Handler Thread: " + this.getHandlerDescription() + " " + Thread.currentThread());
-        this.handlerThread.start();
     }
 
     public Request executeRequestReadEvent() throws IOException, ClassNotFoundException {
@@ -95,6 +87,7 @@ public abstract class RequestHandler implements Runnable {
 
     @Override
     public void run() {
+        this.currentThread().setName("NIO-HTTP Handler Thread: " + this.getHandlerDescription() + " " + Thread.currentThread());
         this.listenForRequests();
     }
 
