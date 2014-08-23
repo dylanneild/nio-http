@@ -83,9 +83,11 @@ Sure! Please place any pull requests against the devel branch.
 
 ### Current Status
 
-Functional for basic text requests via a StringRequestHandler (see example below) - using GET and HEAD requests over HTTP/1.0 and HTTP/1.1. GET/HEAD/POST requests working, as do parameter value and header value passing via GET/POST (GET and POST via x-www-form-urlencoded only; presently form/multipart requests are received but not decoded into values).
+* Functional for basic text requests via a StringRequestHandler (see example below) - using GET and HEAD requests over HTTP/1.0 and HTTP/1.1. GET/HEAD/POST requests working, as do parameter value and header value passing via GET/POST (GET and POST via x-www-form-urlencoded only; presently form/multipart requests are received but not decoded into values).
 
-Full file server functionality (directory index support still unimplemented) via the FileSystemRequestHandler object. This is a non-blocking I/O file service handler and in it's current (mostly unoptimized) form is capable of pushing close to 5Gbps to thousands of requests from a single SSD.
+* Full file server functionality (directory index support still unimplemented) via the FileSystemRequestHandler object. This is a non-blocking I/O file service handler and in it's current (mostly unoptimized) form is capable of pushing close to 5Gbps to thousands of requests from a single SSD.
+
+* Currently in the process of implementing HTTP Proxy load balancing and FastCGI client support.
 
 ### Issues
 
