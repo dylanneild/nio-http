@@ -1,10 +1,8 @@
 package com.codeandstrings.niohttp.response;
 
-import java.nio.ByteBuffer;
 import java.util.Date;
 
 import com.codeandstrings.niohttp.data.DateUtils;
-import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;

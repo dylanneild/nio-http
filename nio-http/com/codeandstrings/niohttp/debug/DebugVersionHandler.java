@@ -1,5 +1,6 @@
 package com.codeandstrings.niohttp.debug;
 
+import com.codeandstrings.niohttp.exceptions.HandlerInitException;
 import com.codeandstrings.niohttp.handlers.impl.StringRequestHandler;
 import com.codeandstrings.niohttp.request.Request;
 
@@ -7,6 +8,10 @@ import java.util.Enumeration;
 import java.util.Properties;
 
 public class DebugVersionHandler extends StringRequestHandler {
+
+    public DebugVersionHandler() throws HandlerInitException {
+        super();
+    }
 
     @Override
     public String getContentType() {

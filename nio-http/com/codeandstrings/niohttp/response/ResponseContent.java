@@ -1,49 +1,6 @@
 package com.codeandstrings.niohttp.response;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
-
-public class ResponseContent implements Externalizable, ResponseMessage {
-
-    @Override
-    public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeObject(this.bufferHeader);
-
-        if (this.buffer == null) {
-            out.writeInt(-1);
-        } else {
-            out.writeInt(this.buffer.length);
-            out.write(this.buffer, 0, this.buffer.length);
-        }
-    }
-
-    @Override
-    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-
-        this.bufferHeader = (ResponseContentHeader)in.readObject();
-        int arraySize = in.readInt();
-
-        if (arraySize==-1) {
-            this.buffer = null;
-        } else {
-            this.buffer = new byte[arraySize];
-
-            int arrayReadLocation = 0;
-
-            while (true) {
-                int readBytes = in.read(this.buffer, arrayReadLocation, arraySize - arrayReadLocation);
-
-                if (arraySize - arrayReadLocation == 0) {
-                    break;
-                } else {
-                    arrayReadLocation = arrayReadLocation + readBytes;
-                }
-            }
-        }
-
-    }
+public class ResponseContent implements ResponseMessage {
 
     private ResponseContentHeader bufferHeader;
 	private byte[] buffer;
@@ -53,19 +10,8 @@ public class ResponseContent implements Externalizable, ResponseMessage {
         this.buffer = buffer;
     }
 
-    public ResponseContent(ResponseContentHeader bufferHeader, byte[] buffer) {
-        this.bufferHeader = bufferHeader;
-        this.buffer = buffer;
-    }
-
-    public ResponseContent() {}
-
     public byte[] getBuffer() {
 		return buffer;
-	}
-
-	public void setBuffer(byte[] buffer) {
-		this.buffer = buffer;
 	}
 
     @Override
@@ -77,21 +23,9 @@ public class ResponseContent implements Externalizable, ResponseMessage {
         return bufferHeader.isLastBufferForRequest();
     }
 
-    public void setSessionId(long sessionId) {
-        bufferHeader.setSessionId(sessionId);
-    }
-
     @Override
     public long getRequestId() {
         return bufferHeader.getRequestId();
-    }
-
-    public void setLastBufferForRequest(boolean lastBufferForRequest) {
-        bufferHeader.setLastBufferForRequest(lastBufferForRequest);
-    }
-
-    public void setRequestId(long requestId) {
-        bufferHeader.setRequestId(requestId);
     }
 
     @Override

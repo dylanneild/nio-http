@@ -1,5 +1,6 @@
 package com.codeandstrings.niohttp.debug;
 
+import com.codeandstrings.niohttp.exceptions.HandlerInitException;
 import com.codeandstrings.niohttp.handlers.impl.StringRequestHandler;
 import com.codeandstrings.niohttp.request.Request;
 
@@ -10,6 +11,10 @@ import java.util.Set;
 public class DebugRootHandler extends StringRequestHandler {
 
     private static int hits = 0;
+
+    public DebugRootHandler() throws HandlerInitException {
+        super();
+    }
 
     @Override
     public String handleRequest(Request request) {
@@ -26,7 +31,7 @@ public class DebugRootHandler extends StringRequestHandler {
 
         r.append("<h1>NIO-HTTP Debug Page - " + this.hits + "</h1>\n");
 
-        r.append("<p><b>Serving instance: </b>" + this.toString() + " " + Thread.currentThread() + " <br>");
+        r.append("<p><b>Serving instance: </b>" + this.toString() + " <br>");
         r.append("<b>Your IP: </b>");
         r.append(request.getRemoteAddr());
         r.append("<br>");

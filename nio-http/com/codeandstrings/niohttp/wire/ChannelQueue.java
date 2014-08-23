@@ -46,16 +46,16 @@ public class ChannelQueue {
         this.writeSelector = writeSelector;
     }
 
-    public Pipe.SourceChannel getReadChannel() {
-        return this.sourceChannel;
-    }
-
     public Object getNextObject() {
         return this.queue.poll();
     }
 
-    public boolean isThisChannel(SelectableChannel channel) {
+    public boolean isThisReadChannel(SelectableChannel channel) {
         return this.sourceChannel == channel;
+    }
+
+    public boolean isThisWriteChannel(SelectableChannel channel) {
+        return this.sinkChannel == channel;
     }
 
     public boolean shouldReadObject() throws IOException {

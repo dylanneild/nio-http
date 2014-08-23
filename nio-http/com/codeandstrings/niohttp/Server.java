@@ -7,6 +7,7 @@ import java.util.Iterator;
 
 import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.exceptions.EngineInitException;
+import com.codeandstrings.niohttp.exceptions.HandlerInitException;
 import com.codeandstrings.niohttp.exceptions.InsufficientConcurrencyException;
 import com.codeandstrings.niohttp.exceptions.InvalidHandlerException;
 
@@ -59,7 +60,7 @@ public class Server implements Runnable {
 		}
 	}
 
-	public void addRequestHandler(String path, Class handler) throws InvalidHandlerException {
+	public void addRequestHandler(String path, Class handler) throws InvalidHandlerException, HandlerInitException {
         for (Engine engine : this.engineSchedule) {
             engine.addRequestHandler(path, handler);
         }
@@ -122,9 +123,8 @@ public class Server implements Runnable {
 
                         // attach the engine the selection key for later.
                         if (engine == null) {
-                            System.out.println("Null engine");
                             for (int i = 0; i < this.engineSchedule.length; i++) {
-                                if (this.engineSchedule[i].getEngineChannelQueue().isThisChannel(channel)) {
+                                if (this.engineSchedule[i].getEngineChannelQueue().isThisWriteChannel(channel)) {
                                     engine = this.engineSchedule[i];
                                     key.attach(engine);
                                 }

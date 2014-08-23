@@ -1,16 +1,13 @@
 package com.codeandstrings.niohttp.response;
 
-import java.io.*;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 import com.codeandstrings.niohttp.data.HeaderValues;
-import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
 import com.codeandstrings.niohttp.request.Request;
 
-public class Response implements Externalizable, ResponseMessage {
+public class Response implements ResponseMessage {
 
     private long sessionId;
     private long requestId;
@@ -24,68 +21,6 @@ public class Response implements Externalizable, ResponseMessage {
 	private int code;
 	private String description;
 	private HeaderValues headers;
-
-    private byte[] byteRepresentation;
-
-    @Override
-    public void writeExternal(ObjectOutput out) throws IOException {
-
-        out.writeLong(this.sessionId);
-        out.writeLong(this.requestId);
-        out.writeBoolean(this.transmitted);
-        out.writeBoolean(this.bodyIncluded);
-        out.writeObject(this.protocol);
-        out.writeObject(this.method);
-        out.writeInt(this.code);
-        out.writeObject(this.description);
-        out.writeObject(this.headers);
-
-        byte outgoingRepresentation[] = this.createByteRepresentation();
-
-        if (outgoingRepresentation == null) {
-            out.writeInt(-1);
-        } else {
-            out.writeInt(outgoingRepresentation.length);
-            out.write(outgoingRepresentation, 0, outgoingRepresentation.length);
-        }
-
-    }
-
-    @Override
-    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-
-        this.sessionId = in.readLong();
-        this.requestId = in.readLong();
-        this.transmitted = in.readBoolean();
-        this.bodyIncluded = in.readBoolean();
-        this.protocol = (HttpProtocol)in.readObject();
-        this.method = (RequestMethod)in.readObject();
-        this.code = in.readInt();
-        this.description = (String)in.readObject();
-        this.headers = (HeaderValues)in.readObject();
-
-        int incomingRepresentationSize = in.readInt();
-
-        if (incomingRepresentationSize == -1) {
-            this.byteRepresentation = null;
-        } else {
-            this.byteRepresentation = new byte[incomingRepresentationSize];
-            int progress = 0;
-
-            while (true) {
-                int bytesRead = in.read(this.byteRepresentation, progress, incomingRepresentationSize - progress);
-
-                if (incomingRepresentationSize - progress - bytesRead == 0) {
-                    break;
-                } else {
-                    progress = progress + bytesRead;
-                }
-            }
-        }
-
-    }
-
-    public Response() {}
 
     private void configureFromConstructor(long sessionId, HttpProtocol protocol, RequestMethod method) {
         this.sessionId = sessionId;
@@ -113,14 +48,6 @@ public class Response implements Externalizable, ResponseMessage {
     @Override
     public long getRequestId() {
         return requestId;
-    }
-
-    public boolean isTransmitted() {
-        return transmitted;
-    }
-
-    public void setTransmitted(boolean transmitted) {
-        this.transmitted = transmitted;
     }
 
     public boolean isBodyIncluded() {
@@ -203,23 +130,15 @@ public class Response implements Externalizable, ResponseMessage {
                 '}';
     }
 
-    public int getCode() {
-		return code;
-	}
-
 	public void setCode(int code) {
 		this.code = code;
-	}
-
-	public String getDescription() {
-		return description;
 	}
 
 	public void setDescription(String description) {
 		this.description = description;
 	}
 
-    private byte[] createByteRepresentation() {
+	public byte[] getByteRepresentation() {
         if (this.protocol != HttpProtocol.HTTP0_9) {
             StringBuilder r = new StringBuilder();
 
@@ -235,14 +154,6 @@ public class Response implements Externalizable, ResponseMessage {
             return s.getBytes(Charset.forName("ISO-8859-1"));
         } else {
             return null;
-        }
-    }
-
-	public byte[] getByteRepresentation() {
-        if (this.byteRepresentation != null) {
-            return this.byteRepresentation;
-        } else {
-            return this.createByteRepresentation();
         }
 	}
 
