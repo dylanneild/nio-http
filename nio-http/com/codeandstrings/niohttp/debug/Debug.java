@@ -27,7 +27,7 @@ public class Debug {
         }
 
         try {
-//            server.addRequestHandler("/pictures/.*", DebugPictureHandler.class);
+            server.addRequestHandler("/pictures/.*", DebugPictureHandler.class);
             server.addRequestHandler("/version", DebugVersionHandler.class);
             server.addRequestHandler(".*", DebugRootHandler.class);
 

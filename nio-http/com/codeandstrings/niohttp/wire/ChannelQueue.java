@@ -19,6 +19,11 @@ public class ChannelQueue {
     private ByteBuffer readBuffer;
     private ByteBuffer writeBuffer;
     private int notificationQueue;
+    private boolean continueWriteNotifications;
+
+    public void setContinueWriteNotifications(boolean continueWriteNotifications) {
+        this.continueWriteNotifications = continueWriteNotifications;
+    }
 
     public ChannelQueue(Selector readSelector) throws IOException {
 
@@ -66,7 +71,6 @@ public class ChannelQueue {
             readBuffer.flip();
             return readBuffer.get() == 0x1;
         } else {
-            System.out.println("Strange...");
             return false;
         }
 
@@ -96,6 +100,10 @@ public class ChannelQueue {
 
         this.notificationQueue -= deduction;
         int register = this.notificationQueue == 0 ? 0 : SelectionKey.OP_WRITE;
+
+        if (continueWriteNotifications) {
+            register = SelectionKey.OP_WRITE;
+        }
 
         this.sinkChannel.register(this.writeSelector, register);
 
