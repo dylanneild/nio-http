@@ -18,6 +18,7 @@ import com.codeandstrings.niohttp.sessions.Session;
 import com.codeandstrings.niohttp.wire.ChannelQueue;
 
 import java.io.IOException;
+import java.net.StandardSocketOptions;
 import java.nio.channels.*;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -55,10 +56,12 @@ public class Engine extends Thread {
 
     private void executeChannelReadFromServer(SelectableChannel channel) throws IOException {
         if (this.channelQueue.shouldReadObject()) {
+
             SocketChannel newChannel = (SocketChannel) this.channelQueue.getNextObject();
 
             if (newChannel != null) {
                 newChannel.configureBlocking(false);
+                newChannel.setOption(StandardSocketOptions.TCP_NODELAY, this.parameters.isTcpNoDelay());
                 newChannel.register(this.selector, SelectionKey.OP_READ);
             }
         }

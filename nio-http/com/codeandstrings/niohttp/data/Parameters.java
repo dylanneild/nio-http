@@ -1,13 +1,13 @@
 package com.codeandstrings.niohttp.data;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
+public class Parameters {
 
-public class Parameters implements Externalizable {
-
-    private static final long serialVersionUID = 9070633037021307477L;
+    private int port;
+	private String serverString;
+	private String serverIp;
+	private int maximumPostSize;
+    private int connectionBacklog;
+    private boolean tcpNoDelay;
 
     public Parameters copy() {
         Parameters r = new Parameters();
@@ -16,31 +16,8 @@ public class Parameters implements Externalizable {
         r.serverIp = String.valueOf(this.serverIp);
         r.maximumPostSize = this.maximumPostSize;
         r.connectionBacklog = this.connectionBacklog;
+        r.tcpNoDelay = this.tcpNoDelay;
         return r;
-    }
-
-    private int port;
-	private String serverString;
-	private String serverIp;
-	private int maximumPostSize;
-    private int connectionBacklog;
-
-    @Override
-    public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeInt(this.port);
-        out.writeObject(this.serverString == null ? "" : this.serverString);
-        out.writeObject(this.serverIp == null ? "" : this.serverIp);
-        out.writeInt(this.maximumPostSize);
-        out.writeInt(this.connectionBacklog);
-    }
-
-    @Override
-    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        this.port = in.readInt();
-        this.serverString = (String)in.readObject();
-        this.serverIp = (String)in.readObject();
-        this.maximumPostSize = in.readInt();
-        this.connectionBacklog = in.readInt();
     }
 
     private void configureDefaultParameters() {
@@ -49,6 +26,7 @@ public class Parameters implements Externalizable {
 		this.serverIp = null;
 		this.maximumPostSize = (8 * 1024 * 1024);
         this.connectionBacklog = 16 * 1024;
+        this.tcpNoDelay = true;
 	}
 
 	public static Parameters getDefaultParameters() {
@@ -63,6 +41,14 @@ public class Parameters implements Externalizable {
         this.configureDefaultParameters();
         this.port = port;
 	}
+
+    public boolean isTcpNoDelay() {
+        return tcpNoDelay;
+    }
+
+    public void setTcpNoDelay(boolean tcpNoDelay) {
+        this.tcpNoDelay = tcpNoDelay;
+    }
 
     public int getConnectionBacklog() {
         return connectionBacklog;

@@ -67,7 +67,7 @@ public class HttpSession extends Session {
      */
     public HttpSession(SocketChannel channel, Selector selector, Parameters parameters) {
         super(channel, selector, parameters);
-        this.readBuffer = ByteBuffer.allocateDirect(1024);
+        this.readBuffer = ByteBuffer.allocateDirect(1460);
         this.resetHeaderReads();
     }
 
@@ -104,6 +104,7 @@ public class HttpSession extends Session {
 
         if (request != null) {
             this.requestQueue.add(request);
+            this.requestMap.put(request.getRequestId(), request);
         }
 
         return request;
@@ -216,6 +217,16 @@ public class HttpSession extends Session {
     private final void socketWriteFullClear() throws ClosedChannelException {
 
         this.socketWritePartialClear();
+
+        if (this.writeResponse != null) {
+            if (this.writeResponse.getRequestId() >= 0) {
+                this.responseMap.remove(this.writeResponse.getRequestId());
+            }
+        }
+
+        if (this.writeRequest != null) {
+            this.requestMap.remove(this.writeRequest.getRequestId());
+        }
 
         this.writeRequest = null;
         this.writeResponse = null;

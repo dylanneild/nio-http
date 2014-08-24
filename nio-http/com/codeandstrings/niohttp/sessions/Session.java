@@ -41,6 +41,11 @@ public abstract class Session {
     protected Queue<Response> responseQueue;
     protected Queue<ResponseContent> contentQueue;
 
+    /* Maps */
+    protected Map<Long,Request> requestMap;
+    protected Map<Long,Response> responseMap;
+
+    /* Constructor */
     protected Session(SocketChannel channel, Selector selector, Parameters parameters) {
 
         this.sessionId = Session.lastSessionId;
@@ -53,9 +58,12 @@ public abstract class Session {
         this.maxRequestSize = IdealBlockSize.VALUE;
         this.nextRequestId = 0;
 
-        this.requestQueue = new LinkedList<Request>();
-        this.contentQueue = new LinkedList<ResponseContent>();
-        this.responseQueue = new LinkedList<Response>();
+        this.requestMap = new HashMap<>();
+        this.responseMap = new HashMap<>();
+
+        this.requestQueue = new LinkedList<>();
+        this.contentQueue = new LinkedList<>();
+        this.responseQueue = new LinkedList<>();
 
     }
 
@@ -92,7 +100,15 @@ public abstract class Session {
     public void queueMessage(ResponseMessage message) throws IOException {
 
         if (message instanceof Response) {
-            this.responseQueue.add((Response)message);
+
+            Response response = (Response)message;
+
+            this.responseQueue.add(response);
+
+            if (response.getRequestId() >= 0) {
+                this.responseMap.put(response.getRequestId(), response);
+            }
+
         } else {
             this.contentQueue.add((ResponseContent)message);
         }
@@ -103,16 +119,14 @@ public abstract class Session {
 
     public void removeRequest(Request request) {
         this.requestQueue.remove(request);
+        this.requestMap.remove(request.getRequestId());
     }
 
     public Request getRequest(long requestId) {
-        for (Request r : this.requestQueue) {
-            if (r.getRequestId()==requestId)
-                return r;
-        }
-
-        return null;
+        return this.requestMap.get(requestId);
     }
+
+    public Response getResponse(long requestId) { return this.responseMap.get(requestId); }
 
     public abstract void resetHeaderReads();
     public abstract void socketWriteEvent() throws IOException, CloseConnectionException;

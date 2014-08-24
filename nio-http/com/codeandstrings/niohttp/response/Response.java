@@ -23,6 +23,7 @@ public class Response implements ResponseMessage {
 	private HeaderValues headers;
 
     private void configureFromConstructor(long sessionId, HttpProtocol protocol, RequestMethod method) {
+        this.requestId = -1;
         this.sessionId = sessionId;
         this.protocol = protocol;
         this.method = method;
