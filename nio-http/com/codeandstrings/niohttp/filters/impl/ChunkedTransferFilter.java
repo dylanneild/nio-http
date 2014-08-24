@@ -20,12 +20,13 @@ public class ChunkedTransferFilter extends FilterBase {
     }
 
     @Override
-    public void filter(Response response) {
-        response.addHeader("Transfer-Encoding", "chunked");
+    public void filter(Request request, Response response) {
+
     }
 
     @Override
-    public void filter(ResponseContent content) {
+    public void filter(Request request, ResponseContent content) {
         String contentSizeHex = Integer.toHexString(content.getBuffer().length);
     }
+
 }

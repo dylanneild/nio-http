@@ -334,6 +334,20 @@ public class HttpSession extends Session {
 
     private final void socketWriteConvertResponseContent(ResponseContent responseContent) {
         this.writeBufferLastPacket = responseContent.isLastBufferForRequest();
+
+        this.writeBuffer = ByteBuffer.allocate(responseContent.getTotalBufferSize());
+
+        if (responseContent.getHeaderBuffer() != null)
+            this.writeBuffer.put(responseContent.getHeaderBuffer());
+
+        if (responseContent.getBuffer() != null)
+            this.writeBuffer.put(responseContent.getBuffer());
+
+        if (responseContent.getFooterBuffer() != null)
+            this.writeBuffer.put(responseContent.getFooterBuffer());
+
+        this.writeBuffer.flip();
+
         this.writeBuffer = ByteBuffer.wrap(responseContent.getBuffer());
     }
 

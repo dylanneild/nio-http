@@ -4,10 +4,28 @@ public class ResponseContent implements ResponseMessage {
 
     private ResponseContentHeader bufferHeader;
 	private byte[] buffer;
+    private byte[] headerBuffer;
+    private byte[] footerBuffer;
 
     public ResponseContent(long sessionId, long requestId, byte[] buffer, boolean lastBufferForRequest) {
         this.bufferHeader = new ResponseContentHeader(sessionId, requestId, lastBufferForRequest);
         this.buffer = buffer;
+    }
+
+    public byte[] getHeaderBuffer() {
+        return headerBuffer;
+    }
+
+    public void setHeaderBuffer(byte[] headerBuffer) {
+        this.headerBuffer = headerBuffer;
+    }
+
+    public byte[] getFooterBuffer() {
+        return footerBuffer;
+    }
+
+    public void setFooterBuffer(byte[] footerBuffer) {
+        this.footerBuffer = footerBuffer;
     }
 
     public byte[] getBuffer() {
@@ -16,6 +34,13 @@ public class ResponseContent implements ResponseMessage {
 
     public void setBuffer(byte[] buffer) {
         this.buffer = buffer;
+    }
+
+    public int getTotalBufferSize() {
+        int h = this.headerBuffer == null ? 0 : this.headerBuffer.length;
+        int f = this.footerBuffer == null ? 0 : this.footerBuffer.length;
+        int b = this.buffer == null ? 0 : this.buffer.length;
+        return h+f+b;
     }
 
     @Override
