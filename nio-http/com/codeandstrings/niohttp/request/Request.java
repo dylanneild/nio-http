@@ -51,10 +51,17 @@ public class Request {
 
         String connection = this.header.getHeaderCaseInsensitive("connection");
 
-        if (connection == null)
-            return false;
+        if (connection == null) {
+            if (this.header.getProtocol() == HttpProtocol.HTTP1_1) {
+                return true;
+            } else {
+                return false;
+            }
+        }
         else if (connection.equalsIgnoreCase("keep-alive"))
             return true;
+        else if (connection.equalsIgnoreCase("close"))
+            return false;
         else
             return false;
 
