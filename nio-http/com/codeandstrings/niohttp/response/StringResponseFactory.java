@@ -2,7 +2,6 @@ package com.codeandstrings.niohttp.response;
 
 import com.codeandstrings.niohttp.request.Request;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 public class StringResponseFactory {

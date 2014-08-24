@@ -16,7 +16,7 @@ import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
 
-public class Request implements Externalizable {
+public class Request {
 
     private long sessionId;
     private long requestId;
@@ -28,30 +28,6 @@ public class Request implements Externalizable {
     private Parameters serverParameters;
 
     public Request() {}
-
-    @Override
-    public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeLong(this.sessionId);
-        out.writeLong(this.requestId);
-        out.writeLong(this.timestamp);
-        out.writeObject(this.remoteAddr);
-        out.writeInt(this.remotePort);
-        out.writeObject(this.header);
-        out.writeObject(this.body);
-        out.writeObject(this.serverParameters);
-    }
-
-    @Override
-    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        this.sessionId = in.readLong();
-        this.requestId = in.readLong();
-        this.timestamp = in.readLong();
-        this.remoteAddr = (String)in.readObject();
-        this.remotePort = in.readInt();
-        this.header = (RequestHeader)in.readObject();
-        this.body = (RequestBody)in.readObject();
-        this.serverParameters = (Parameters)in.readObject();
-    }
 
     public static Request generateRequest(long sessionId, long requestId, String remoteAddr,
                                           int remotePort, RequestHeader header,
@@ -75,10 +51,17 @@ public class Request implements Externalizable {
 
         String connection = this.header.getHeaderCaseInsensitive("connection");
 
-        if (connection == null)
-            return false;
+        if (connection == null) {
+            if (this.header.getProtocol() == HttpProtocol.HTTP1_1) {
+                return true;
+            } else {
+                return false;
+            }
+        }
         else if (connection.equalsIgnoreCase("keep-alive"))
             return true;
+        else if (connection.equalsIgnoreCase("close"))
+            return false;
         else
             return false;
 

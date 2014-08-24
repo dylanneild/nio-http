@@ -1,27 +1,21 @@
 package com.codeandstrings.niohttp.handlers.broker;
 
+import com.codeandstrings.niohttp.exceptions.HandlerInitException;
 import com.codeandstrings.niohttp.exceptions.InvalidHandlerException;
 import com.codeandstrings.niohttp.handlers.base.RequestHandler;
 import com.codeandstrings.niohttp.request.Request;
 
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.Pipe;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
+import java.nio.channels.*;
 import java.util.ArrayList;
 
 public class RequestHandlerBroker {
 
     private ArrayList<RequestHandlerMount> handlers;
+    private Selector engineSelector;
 
-    public RequestHandlerBroker() {
+    public RequestHandlerBroker(Selector selector) {
+        this.engineSelector = selector;
         this.handlers = new ArrayList<RequestHandlerMount>();
-    }
-
-    public void setSelectorReadHandler(Selector selector) throws ClosedChannelException {
-        for (RequestHandlerMount mount : this.handlers) {
-            mount.getHandler().getEngineSource().register(selector, SelectionKey.OP_READ);
-        }
     }
 
     public RequestHandler getHandlerForRequest(Request request) {
@@ -84,52 +78,38 @@ public class RequestHandlerBroker {
             return isValidClass(handler.getSuperclass());
     }
 
-    public void addHandler(String path, Class handler) throws InvalidHandlerException {
+    public void addHandler(String path, Class handler) throws InvalidHandlerException, HandlerInitException {
 
         if (!isValidClass(handler))
             throw new InvalidHandlerException();
 
         try {
 
-            RequestHandler testHandler = (RequestHandler)handler.newInstance();
+            RequestHandler newHandler = (RequestHandler) handler.newInstance();
+            newHandler.setEngineQueueSelector(this.engineSelector);
 
-            /**
-             * Handlers with less than 0 concurrency aren't support.
-             * In future we'll throw an InlineHandlerException for handlers with -1
-             * concurrency as these will be handled inline by the actual engine
-             * core. Useful for things like version dumps, stats dumps, etc - anything
-             * that takes no time to crunch and can just be in-lined.
-             */
-            if (testHandler.getConcurrency() < 1)
-                return;
+            RequestHandlerMount mount = new RequestHandlerMount(path, newHandler);
 
-            for (int i = 0; i < testHandler.getConcurrency(); i++) {
+            newHandler.start();
 
-                RequestHandler newHandler = (RequestHandler)handler.newInstance();
-                RequestHandlerMount mount = new RequestHandlerMount(path, newHandler);
+            this.handlers.add(mount);
 
-                newHandler.startThread();
-                this.handlers.add(mount);
-
-            }
-
-
-        } catch (InstantiationException e) {
-            throw new InvalidHandlerException(e);
-        } catch (IllegalAccessException e) {
+        } catch (InstantiationException | IllegalAccessException e) {
             throw new InvalidHandlerException(e);
         }
 
     }
 
-    public RequestHandler getHandlerForEngineSourceChannel(Pipe.SourceChannel channel) {
+    public RequestHandler getHandlerForEngineReceive(SelectableChannel channel) {
 
-        if (this.handlers.size() == 0)
+        if (this.handlers.size() == 0) {
             return null;
+        }
 
         for (RequestHandlerMount mount : this.handlers) {
-            if (mount.getHandler().getEngineSource() == channel) {
-                return mount.getHandler();
+            RequestHandler handler = mount.getHandler();
+            if (handler.getEngineQueue().isThisReadChannel(channel)) {
+                return handler;
             }
         }
 
@@ -137,18 +117,36 @@ public class RequestHandlerBroker {
 
     }
 
-    public RequestHandler getHandlerForEngineSinkChannel(Pipe.SinkChannel channel) {
+    public RequestHandler getHandlerForEngineSend(SelectableChannel channel) {
 
-        if (this.handlers.size() == 0)
+        if (this.handlers.size() == 0) {
             return null;
+        }
 
         for (RequestHandlerMount mount : this.handlers) {
-            if (mount.getHandler().getEngineSink() == channel) {
-                return mount.getHandler();
+            RequestHandler handler = mount.getHandler();
+            if (handler.getHandlerQueue().isThisWriteChannel(channel)) {
+                return handler;
             }
         }
 
         return null;
+
     }
+
+
+//    public RequestHandler getHandlerForEngineSinkChannel(Pipe.SinkChannel channel) {
+//
+//        if (this.handlers.size() == 0)
+//            return null;
+//
+//        for (RequestHandlerMount mount : this.handlers) {
+//            if (mount.getHandler().getEngineSink() == channel) {
+//                return mount.getHandler();
+//            }
+//        }
+//
+//        return null;
+//    }
 
 }

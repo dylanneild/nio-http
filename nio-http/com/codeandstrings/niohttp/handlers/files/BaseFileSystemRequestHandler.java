@@ -4,6 +4,7 @@ import com.codeandstrings.niohttp.data.DateUtils;
 import com.codeandstrings.niohttp.data.DirectoryMember;
 import com.codeandstrings.niohttp.data.mime.MimeTypes;
 import com.codeandstrings.niohttp.enums.RequestMethod;
+import com.codeandstrings.niohttp.exceptions.HandlerInitException;
 import com.codeandstrings.niohttp.exceptions.http.*;
 import com.codeandstrings.niohttp.handlers.base.RequestHandler;
 import com.codeandstrings.niohttp.request.Request;
@@ -32,15 +33,11 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
     public abstract String getDirectoryListing(Request request, DirectoryMember directoryMember);
     public abstract String getDirectoryFooter(Request request);
 
-    public BaseFileSystemRequestHandler() {
+    public BaseFileSystemRequestHandler() throws HandlerInitException {
+        super();
         this.tasks = new LinkedList<FileRequestObject>();
         this.fileSystem = FileSystems.getDefault();
         this.mimeTypes = MimeTypes.getInstance();
-    }
-
-    @Override
-    public final int getConcurrency() {
-        return 1;
     }
 
     private Path getRatifiedFilePath(String requestUri) throws BadRequestException, ForbiddenException, NotFoundException {
@@ -84,17 +81,8 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
         return "File System Handler";
     }
 
-    private void scheduleWrites(Selector selector) throws ClosedChannelException {
-        this.getHandlerWriteChannel().register(selector, SelectionKey.OP_WRITE);
-    }
-
-    private void descheduleWrites(Selector selector) throws ClosedChannelException {
-        this.getHandlerWriteChannel().register(selector, 0);
-    }
-
-    private void sendException(HttpException e, Request request, Selector selector) throws ClosedChannelException {
-        this.sendResponse(ResponseFactory.createResponse(e, request));
-        this.scheduleWrites(selector);
+    private void sendException(HttpException e, Request request, Selector selector) throws IOException, InterruptedException {
+        this.getEngineQueue().sendObject(ResponseFactory.createResponse(e, request));
     }
 
     private void serviceDirectoryRequest(Path path, Request request, Selector selector) throws Exception {
@@ -122,10 +110,8 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
         StringResponseFactory factory = new StringResponseFactory(request, "text/html", html.toString());
 
-        this.sendResponse(factory.getHeader());
-        this.sendResponse(factory.getBody());
-
-        this.scheduleWrites(selector);
+        this.getEngineQueue().sendObject(factory.getHeader());
+        this.getEngineQueue().sendObject(factory.getBody());
 
     }
 
@@ -169,7 +155,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             BaseFileSystemRequestHandler.addFileInformationToRequest(task, r);
         }
 
-        this.sendResponse(r);
+        this.getEngineQueue().sendObject(r);
 
         // if this is a HEAD request, don't bother sending back content
         // otherwise, schedule this new task for later
@@ -185,12 +171,9 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             }
         }
 
-        // schedule writes, no matter what (we're either sending a response or an exception)
-        this.scheduleWrites(selector);
-
     }
 
-    private boolean executeFileReadProcedure(Selector selector) throws ExecutionException, InterruptedException, ClosedChannelException {
+    private boolean executeFileReadProcedure(Selector selector) throws ExecutionException, InterruptedException, IOException {
 
         // there are no further write events to execute;
         // let's see if there are more file read events to refill the buffers
@@ -231,7 +214,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             ResponseContent responseContent = new ResponseContent(task.getSessionId(),
                     task.getRequestId(), content, finalBuffer);
 
-            this.sendResponse(responseContent);
+            this.getEngineQueue().sendObject(responseContent);
 
             if (finalBuffer) {
                 task.close();
@@ -247,55 +230,54 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
         try {
 
-            Selector selector = Selector.open();
-
-            this.getHandlerReadChannel().register(selector, SelectionKey.OP_READ);
-
             while (true) {
 
-                int keyCount = selector.select();
+                int keyCount = this.selector.select();
 
-                if (keyCount == 0)
+                if (keyCount == 0) {
                     continue;
+                }
 
                 Iterator<SelectionKey> ki = selector.selectedKeys().iterator();
 
                 while (ki.hasNext()) {
 
                     SelectionKey key = ki.next();
-                    SelectableChannel channel = key.channel();
 
-                    if (channel instanceof Pipe.SourceChannel) {
+                    if (key.isReadable()) {
 
-                        Request request = (Request)this.executeRequestReadEvent();
+                        if (this.handlerQueue.shouldReadObject()) {
 
-                        if (request != null) {
-                            try {
-                                this.serviceFileRequest(getRatifiedFilePath(request.getRequestURI().getPath()), request, selector);
-                            } catch (HttpException e) {
-                                this.sendException(e, request, selector);
+                            Request request = (Request) this.handlerQueue.getNextObject();
+
+                            if (request != null) {
+                                try {
+                                    this.engineQueue.setContinueWriteNotifications(true);
+                                    this.serviceFileRequest(getRatifiedFilePath(request.getRequestURI().getPath()), request, selector);
+                                } catch (HttpException e) {
+                                    this.sendException(e, request, selector);
+                                }
                             }
+
                         }
 
                     } else {
 
-                        if (!this.executeBufferWriteEvent()) {
+                        this.engineQueue.sendObject(null);
 
-                            boolean file = this.executeFileReadProcedure(selector);
-                            boolean directory = false;
+                        boolean file = this.executeFileReadProcedure(selector);
+                        boolean directory = false;
 
-                            if (!file && !directory) {
-                                this.descheduleWrites(selector);
-                            }
-
+                        if (!file && !directory) {
+                            this.engineQueue.setContinueWriteNotifications(false);
                         }
+
 
                     }
 
                     ki.remove();
 
                 }
-
             }
 
         }
@@ -303,6 +285,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             e.printStackTrace();
             System.exit(-1);
         }
+
     }
 
 }

@@ -1,6 +1,7 @@
 package com.codeandstrings.niohttp.handlers.impl;
 
 import com.codeandstrings.niohttp.data.DirectoryMember;
+import com.codeandstrings.niohttp.exceptions.HandlerInitException;
 import com.codeandstrings.niohttp.handlers.files.BaseFileSystemRequestHandler;
 import com.codeandstrings.niohttp.request.Request;
 
@@ -9,6 +10,10 @@ import java.text.NumberFormat;
 import java.util.Date;
 
 public abstract class FileSystemRequestHandler extends BaseFileSystemRequestHandler {
+
+    protected FileSystemRequestHandler() throws HandlerInitException {
+        super();
+    }
 
     @Override
     public boolean isDirectoryListingsGenerated() {

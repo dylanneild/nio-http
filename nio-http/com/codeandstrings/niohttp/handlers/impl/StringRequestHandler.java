@@ -1,73 +1,64 @@
 package com.codeandstrings.niohttp.handlers.impl;
 
+import com.codeandstrings.niohttp.exceptions.HandlerInitException;
 import com.codeandstrings.niohttp.handlers.base.RequestHandler;
 import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.response.StringResponseFactory;
 
-import java.nio.channels.Pipe;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.util.Iterator;
 
 public abstract class StringRequestHandler extends RequestHandler {
+
+    public StringRequestHandler() throws HandlerInitException {
+        super();
+    }
 
     @Override
     protected final void listenForRequests() {
 
         try {
 
-            Selector selector = Selector.open();
-
-            this.getHandlerReadChannel().register(selector, SelectionKey.OP_READ);
-
             while (true) {
-
-                int keyCount = selector.select();
+                int keyCount = this.selector.select();
 
                 if (keyCount == 0)
                     continue;
 
-                Iterator<SelectionKey> ki = selector.selectedKeys().iterator();
+                Iterator<SelectionKey> ki = this.selector.selectedKeys().iterator();
 
                 while (ki.hasNext()) {
 
                     SelectionKey key = ki.next();
-                    SelectableChannel channel = key.channel();
 
-                    if (channel instanceof Pipe.SourceChannel) {
+                    if (key.isReadable()) {
 
-                        Request request = (Request)this.executeRequestReadEvent();
+                        if (this.handlerQueue.shouldReadObject()) {
+                            Request request = (Request) this.handlerQueue.getNextObject();
 
-                        if (request != null) {
+                            if (request != null) {
 
-                            String responseText = this.handleRequest(request);
-                            StringResponseFactory factory = new StringResponseFactory(request, this.getContentType(), responseText);
+                                String responseText = this.handleRequest(request);
+                                StringResponseFactory factory = new StringResponseFactory(request, this.getContentType(), responseText);
 
-                            this.sendResponse(factory.getHeader());
-                            this.sendResponse(factory.getBody());
+                                this.engineQueue.sendObject(factory.getHeader());
+                                this.engineQueue.sendObject(factory.getBody());
 
-                            this.getHandlerWriteChannel().register(selector, SelectionKey.OP_WRITE);
+                            }
                         }
 
-                    } else {
-
-                        if (!this.executeBufferWriteEvent()) {
-                            channel.register(selector, 0);
-                        }
-
+                    }
+                    else if (key.isWritable()) {
+                        this.engineQueue.sendObject(null);
                     }
 
                     ki.remove();
 
                 }
-
             }
 
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
-            System.exit(-1);
         }
 
     }

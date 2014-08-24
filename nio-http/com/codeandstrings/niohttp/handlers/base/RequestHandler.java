@@ -1,117 +1,54 @@
 package com.codeandstrings.niohttp.handlers.base;
 
-import com.codeandstrings.niohttp.request.Request;
-import com.codeandstrings.niohttp.response.ResponseContent;
-import com.codeandstrings.niohttp.response.ResponseMessage;
+import com.codeandstrings.niohttp.exceptions.HandlerInitException;
 import com.codeandstrings.niohttp.wire.*;
 
-import java.io.*;
-import java.nio.channels.Pipe;
-import java.nio.channels.SelectableChannel;
+import java.nio.channels.Selector;
 
-public abstract class RequestHandler implements Runnable {
+public abstract class RequestHandler extends Thread {
 
-    private Pipe aPipe;
-    private Pipe bPipe;
+    protected ChannelQueue handlerQueue;
+    protected ChannelQueue engineQueue;
+    protected Selector selector;
 
-    private Pipe.SourceChannel engineSource;
-    private Pipe.SourceChannel handlerSource;
-    private Pipe.SinkChannel engineSink;
-    private Pipe.SinkChannel handlerSink;
-
-    private PipeObjectReader requestReader;
-    private PipeObjectWriter requestWriter;
-    private PipeObjectReader responseContentReader;
-    private PipeObjectWriter responseContentWriter;
-
-    private Thread handlerThread;
-
-    public RequestHandler()  {
+    public RequestHandler() throws HandlerInitException {
 
         try {
-            this.aPipe = Pipe.open();
-            this.bPipe = Pipe.open();
+            this.selector = Selector.open();
+            this.handlerQueue = new ChannelQueue(this.selector);
 
-            this.engineSource = aPipe.source();
-            this.handlerSink = aPipe.sink();
-
-            this.handlerSource = bPipe.source();
-            this.engineSink = bPipe.sink();
-
-            this.handlerSource.configureBlocking(false);
-            this.engineSource.configureBlocking(false);
-            this.handlerSink.configureBlocking(false);
-            this.engineSink.configureBlocking(false);
-
-            this.requestReader = new PipeObjectReader(this.handlerSource);
-            this.requestWriter = new PipeObjectWriter(this.engineSink);
-            this.responseContentReader = new PipeObjectReader(this.engineSource);
-            this.responseContentWriter = new PipeObjectWriter(this.handlerSink);
-
+        } catch (Exception e) {
+            throw new HandlerInitException(e);
         }
-        catch (Exception e) {
-            e.printStackTrace();
-            System.exit(-1);
+
+    }
+
+    public void setEngineQueueSelector(Selector selector) throws HandlerInitException {
+        try {
+            this.engineQueue = new ChannelQueue(selector);
+            this.engineQueue.setWriteSelector(this.selector);
+            this.handlerQueue.setWriteSelector(selector);
+        } catch (Exception e) {
+            throw new HandlerInitException(e);
         }
     }
 
-    public void startThread() {
-        this.handlerThread = new Thread(this);
-        this.handlerThread.setName("NIO-HTTP Handler Thread: " + this.getHandlerDescription());
-        this.handlerThread.start();
+    public ChannelQueue getHandlerQueue() {
+        return handlerQueue;
     }
 
-    public Request executeRequestReadEvent() throws IOException, ClassNotFoundException {
-        return (Request) this.requestReader.readObjectFromChannel();
-    }
-
-    public boolean executeRequestWriteEvent() throws IOException {
-        return this.requestWriter.executeObjectWriteEvent();
-    }
-
-    public void sendRequest(Request r) {
-        this.requestWriter.sendObject(r);
-    }
-
-    public void sendResponse(ResponseMessage b) {
-        this.responseContentWriter.sendObject(b);
-    }
-
-    public boolean executeBufferWriteEvent() throws IOException {
-        return this.responseContentWriter.executeObjectWriteEvent();
-    }
-
-    public ResponseMessage executeBufferReadEvent() throws IOException, ClassNotFoundException {
-        return (ResponseMessage) this.responseContentReader.readObjectFromChannel();
-    }
-
-    public Pipe.SourceChannel getEngineSource() {
-        return engineSource;
-    }
-
-    public Pipe.SinkChannel getEngineSink() {
-        return engineSink;
+    public ChannelQueue getEngineQueue() {
+        return engineQueue;
     }
 
     @Override
     public void run() {
+        this.currentThread().setName("NIO-HTTP Handler " + Thread.currentThread().getId());
         this.listenForRequests();
     }
 
     protected abstract void listenForRequests();
 
     protected abstract String getHandlerDescription();
-
-    protected SelectableChannel getHandlerReadChannel() {
-        return this.handlerSource;
-    }
-
-    protected SelectableChannel getHandlerWriteChannel() {
-        return this.handlerSink;
-    }
-
-    public int getConcurrency() {
-        return 1;
-    }
 
 }

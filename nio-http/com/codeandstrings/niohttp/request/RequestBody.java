@@ -3,29 +3,9 @@ package com.codeandstrings.niohttp.request;
 import java.io.*;
 import java.util.Arrays;
 
-public class RequestBody implements Externalizable {
+public class RequestBody  {
 
 	private byte[] bytes;
-
-    @Override
-    public void writeExternal(ObjectOutput out) throws IOException {
-        if (this.bytes == null) {
-            out.writeInt(0);
-        } else {
-            out.writeInt(this.bytes.length);
-            out.write(this.bytes);
-        }
-    }
-
-    @Override
-    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        int length = in.readInt();
-
-        if (length > 0) {
-            this.bytes = new byte[length];
-            in.read(this.bytes);
-        }
-    }
 
     public byte[] getBytes() {
 		return bytes;

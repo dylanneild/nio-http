@@ -9,10 +9,21 @@ public class Parameters implements Externalizable {
 
     private static final long serialVersionUID = 9070633037021307477L;
 
+    public Parameters copy() {
+        Parameters r = new Parameters();
+        r.port = this.port;
+        r.serverString = String.valueOf(this.serverString);
+        r.serverIp = String.valueOf(this.serverIp);
+        r.maximumPostSize = this.maximumPostSize;
+        r.connectionBacklog = this.connectionBacklog;
+        return r;
+    }
+
     private int port;
 	private String serverString;
 	private String serverIp;
 	private int maximumPostSize;
+    private int connectionBacklog;
 
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {
@@ -20,6 +31,7 @@ public class Parameters implements Externalizable {
         out.writeObject(this.serverString == null ? "" : this.serverString);
         out.writeObject(this.serverIp == null ? "" : this.serverIp);
         out.writeInt(this.maximumPostSize);
+        out.writeInt(this.connectionBacklog);
     }
 
     @Override
@@ -28,6 +40,7 @@ public class Parameters implements Externalizable {
         this.serverString = (String)in.readObject();
         this.serverIp = (String)in.readObject();
         this.maximumPostSize = in.readInt();
+        this.connectionBacklog = in.readInt();
     }
 
     private void configureDefaultParameters() {
@@ -35,6 +48,7 @@ public class Parameters implements Externalizable {
 		this.serverString = "NIO-HTTP v0.1";
 		this.serverIp = null;
 		this.maximumPostSize = (8 * 1024 * 1024);
+        this.connectionBacklog = 16 * 1024;
 	}
 
 	public static Parameters getDefaultParameters() {
@@ -43,14 +57,16 @@ public class Parameters implements Externalizable {
 		return r;
 	}
 
-	public Parameters() {
-		this.configureDefaultParameters();
-	}
+	public Parameters() {}
 
-	public Parameters(int port) {
+    public Parameters(int port) {
         this.configureDefaultParameters();
         this.port = port;
 	}
+
+    public int getConnectionBacklog() {
+        return connectionBacklog;
+    }
 
     public String getServerString() {
 		return serverString;

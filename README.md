@@ -5,7 +5,7 @@ A hybrid design HTTP server library for Java 7.
 
 ### How To Use
 
-To build the library, either checout into Eclipse and package your own JAR file (or use the code as-is in your project), or build from the command line using [Apache Ant](http://ant.apache.org):
+To build the library, either checkout into Eclipse / IDEA and package your own JAR file (or use the code as-is in your project), or build from the command line using [Apache Ant](http://ant.apache.org):
 
 	# ant package
 	# file nio-http.jar 
@@ -46,17 +46,32 @@ Then, pass the Class to the server library:
 
 ### Example Server
 
-Demo code is [up and running](http://sky.codeandstrings.com) at and demonstrates the server available and handling requests in it's current state.
+Demo code is [up and running](http://sky.codeandstrings.com) and demonstrates the library available and handling requests in it's current state.  
+
+### Performance
+
+For basic file serving performance, serving the same file (the Apache index.html file included in Ubuntu), NIO-HTTP compares favourably with major HTTP server implementations.
+
+On Ubuntu 14.04, out of the box, serving 1M requests to 10,000 connections:
+
+* Apache (event): 9,275 requests per second.
+* Nginx: 11,733 requests per second.
+* NIO-HTTP: 18,150 requests per second.
+
+Nginx can, of course, scale to very high levels when fine tuned but these numbers should show that NIO-HTTP performance is already very good. Additionally, other benchmarking suites show Nginx on the same hardware scoring much better benchmarking scores. These numbers aren't intended to show that NIO-HTTP is faster than Nginx; they are simply intended to demonstrate that using NIO-HTTP in your project will not automatically create performance problems.
 
 ### Architecture
 
-NIO-HTTP uses a hybrid design architecture to process requests: 
+NIO-HTTP uses a hybrid design architecture to process requests:
 
 ##### Core Service
-Server and Client sockets are all registered against a master selector and data is read/written (and connections are accepeted) using an non-blocking event system with buffered reading and writing. The core of NIO-HTTP can handle thousands of simultaneous connections with minimal CPU load. In addition to TCP socket management, the core service handles connectivity with handler services, where HTTP responses are generated. In effect, the core service is a master connection routing binding HTTP clients to handler services.
+Client sockets are all registered against a master selector service. The master service load balances the connections onto a connection engine. Each connection engine runs in it's own thread.
+
+##### Engine Service
+The engine service is responsible for managing client connections. An engine service is responsible for reading client requests and relaying these requests to connection handlers, where responses are generated. 
 
 ##### Handler Services
-Once the core services reads client requests, handler services generate the responses. Handler services operate in their own threads and can be crafted to meet the needs of the implementing code. Each handler communicates with the core service via a non-blocking channel, allowing handler input and output to integrate with the core service directly.
+Once the engine service reads client requests, handler services generate the responses. Handler services operate in their own threads and can be crafted to meet the needs of the implementing code. Each handler communicates with the engine service via a non-blocking channel, allowing handler input and output to integrate with the engine service directly.
 
 At present, the following handler services are working/planned: 
 
@@ -69,9 +84,14 @@ Any combination of handlers can be used and assigned to URIs. Multiple handlers 
 
 By combining file system server, fast CGI and proxy handlers a full production deployable web service can be quickly created with minimal additional code.
 
+##### Hybrid Channel / Queue
+Core, Engine and Handler services interact using a hybrid channel / queue system. Channels are used between the service threads to notify of connection and/or data arrival. This way threads can receive notifications using standard non-blocking I/O calls, bundling notification messages with normal server load. Once a notification message is receive, a thread-safe queue is used to transfer actual data between threads. This avoids the traditional select(delay) behaviour of similar systems, allowing for pure event based / non-polling operation.
+
+The end result is a server that can scale on multiple processors / cores in an almost linear fashion (tested up to 16 CPU cores).
+
 ### Requirements
 
-* Java 7
+* Java 7+
 * Apache Ant for command line building
 * Eclipse or IDEA (or the IDE of your choice) for development 
 
@@ -81,9 +101,11 @@ Sure! Please place any pull requests against the devel branch.
 
 ### Current Status
 
-Functional for basic text requests via a StringRequestHandler (see example below) - using GET and HEAD requests over HTTP/1.0 and HTTP/1.1. GET/HEAD/POST requests working, as do parameter value and header value passing via GET/POST (GET and POST via x-www-form-urlencoded only; presently form/multipart requests are received but not decoded into values).
+* Functional for basic text requests via a StringRequestHandler (see example below) - using GET and HEAD requests over HTTP/1.0 and HTTP/1.1. GET/HEAD/POST requests working, as do parameter value and header value passing via GET/POST (GET and POST via x-www-form-urlencoded only; presently form/multipart requests are received but not decoded into values).
 
-File stream responses are not yet implemented (Simple String handlers as exampled below only), though this is an immediate issue to resolve.
+* Full file server functionality (directory index support still unimplemented) via the FileSystemRequestHandler object. This is a non-blocking I/O file service handler and in it's current (mostly unoptimized) form is capable of pushing ~10Gbps to thousands of requests from a single SSD (backed by OS level file-system caching).
+
+* Currently in the process of implementing HTTP Proxy load balancing and FastCGI client support.
 
 ### Issues
 

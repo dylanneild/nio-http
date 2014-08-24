@@ -3,37 +3,50 @@ package com.codeandstrings.niohttp;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.*;
-import java.util.HashMap;
 import java.util.Iterator;
 
 import com.codeandstrings.niohttp.data.Parameters;
+import com.codeandstrings.niohttp.exceptions.EngineInitException;
+import com.codeandstrings.niohttp.exceptions.HandlerInitException;
+import com.codeandstrings.niohttp.exceptions.InsufficientConcurrencyException;
 import com.codeandstrings.niohttp.exceptions.InvalidHandlerException;
-import com.codeandstrings.niohttp.exceptions.http.HttpException;
-import com.codeandstrings.niohttp.exceptions.http.NotFoundException;
-import com.codeandstrings.niohttp.exceptions.tcp.CloseConnectionException;
-import com.codeandstrings.niohttp.handlers.base.RequestHandler;
-import com.codeandstrings.niohttp.handlers.broker.RequestHandlerBroker;
-import com.codeandstrings.niohttp.request.Request;
-import com.codeandstrings.niohttp.response.ExceptionResponseFactory;
-import com.codeandstrings.niohttp.response.Response;
-import com.codeandstrings.niohttp.response.ResponseMessage;
-import com.codeandstrings.niohttp.sessions.HttpSession;
-import com.codeandstrings.niohttp.sessions.Session;
 
 public class Server implements Runnable {
 
+    private Selector selector;
 	private Parameters parameters;
 	private InetSocketAddress socketAddress;
 	private ServerSocketChannel serverSocketChannel;
-    private HashMap<Long,Session> sessions;
-    private RequestHandlerBroker requestHandlerBroker;
+    private Engine[] engineSchedule;
+    private int engineConcurrency;
+    private int enginePointer;
 
-	public Server() {
-		this.parameters = Parameters.getDefaultParameters();
-        this.sessions = new HashMap<Long,Session>();
-        this.requestHandlerBroker = new RequestHandlerBroker();
-        Thread.currentThread().setName("NIO-HTTP Selection Thread");
-	}
+	public Server(int concurrency) throws InsufficientConcurrencyException, EngineInitException {
+
+        if (concurrency < 1) {
+            throw new InsufficientConcurrencyException();
+        }
+
+        this.parameters = Parameters.getDefaultParameters();
+        this.engineSchedule = new Engine[concurrency];
+
+        this.engineConcurrency = concurrency;
+        this.enginePointer = 0;
+
+        try {
+            this.selector = Selector.open();
+        } catch (IOException e) {
+            throw new EngineInitException(e);
+        }
+
+        for (int i = 0; i < this.engineConcurrency; i++) {
+            this.engineSchedule[i] = new Engine(this.parameters);
+            this.engineSchedule[i].getEngineChannelQueue().setWriteSelector(this.selector);
+        }
+
+        Thread.currentThread().setName("NIO-HTTP Server Thread");
+
+    }
 
 	public void setParameters(Parameters parameters) {
 		this.parameters = parameters;
@@ -47,38 +60,42 @@ public class Server implements Runnable {
 		}
 	}
 
-	public void addRequestHandler(String path, Class handler) throws InvalidHandlerException {
-        this.requestHandlerBroker.addHandler(path, handler);
+	public void addRequestHandler(String path, Class handler) throws InvalidHandlerException, HandlerInitException {
+        for (Engine engine : this.engineSchedule) {
+            engine.addRequestHandler(path, handler);
+        }
 	}
 
 	private void configureServerSocketChannel() throws IOException {
 		this.serverSocketChannel = ServerSocketChannel.open();
 		this.serverSocketChannel.configureBlocking(false);
-		this.serverSocketChannel.bind(this.socketAddress, 1024);
+		this.serverSocketChannel.bind(this.socketAddress, this.parameters.getConnectionBacklog());
 	}
 
 	@Override
 	public void run() {
 
-		try {
+        /* start engine threads */
+        for (Engine engine : this.engineSchedule) {
+            engine.start();
+        }
+
+        try {
 
 			this.configureSocketAddress();
 			this.configureServerSocketChannel();
 
-			Selector selector = Selector.open();
-
-			this.serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-            this.requestHandlerBroker.setSelectorReadHandler(selector);
+			this.serverSocketChannel.register(this.selector, SelectionKey.OP_ACCEPT);
 
 			while (true) {
 
-				int keys = selector.select();
+				int keys = this.selector.select();
 
 				if (keys == 0) {
 					continue;
 				}
 
-				Iterator<SelectionKey> ki = selector.selectedKeys().iterator();
+				Iterator<SelectionKey> ki = this.selector.selectedKeys().iterator();
 
 				while (ki.hasNext()) {
 
@@ -87,127 +104,36 @@ public class Server implements Runnable {
 					if (key.isAcceptable()) {
 
 						/*
-						 * Accept a connection register it as non-blocking and
-						 * part of the master selector's selection chain (for
-						 * OP_READ functions).
+						 * Accept a connection...
 						 */
 						SocketChannel connection = ((ServerSocketChannel) key.channel()).accept();
-						connection.configureBlocking(false);
-						connection.register(selector, SelectionKey.OP_READ);
+                        Engine nextEngine = this.engineSchedule[this.enginePointer];
+                        nextEngine.getEngineChannelQueue().sendObject(connection);
 
-					}
-                    else if (key.isReadable()) {
+                        this.enginePointer++;
 
-						SelectableChannel channel = key.channel();
-
-						if (channel instanceof SocketChannel) {
-
-                            HttpSession session = (HttpSession) key.attachment();
-
-                            if (session == null) {
-								/*
-								 * The selector has triggered because a socket
-								 * has generated a read event and there is
-								 * presently no session available to handle it.
-								 * Make a new one and ask it to handle the
-								 * session.
-								 */
-								session = new HttpSession((SocketChannel) channel,
-										selector, this.parameters);
-
-                                this.sessions.put(session.getSessionId(), session);
-                                key.attach(session);
-
-							}
-
-							try {
-
-                                Request request = session.socketReadEvent();
-
-                                if (request != null) {
-
-                                    session.resetHeaderReads();
-
-                                    RequestHandler requestHandler = this.requestHandlerBroker.getHandlerForRequest(request);
-
-                                    if (requestHandler == null) {
-                                        session.removeRequest(request);
-                                        throw new NotFoundException();
-                                    } else {
-                                        requestHandler.sendRequest(request);
-                                        requestHandler.getEngineSink().register(selector, SelectionKey.OP_WRITE);
-                                    }
-
-                                }
-
-                            } catch (CloseConnectionException e) {
-                                this.sessions.remove(session.getSessionId());
-                                session.getChannel().close();
-                            } catch (HttpException e) {
-                                Response r = (new ExceptionResponseFactory(e)).create(session.getSessionId(), this.parameters);
-                                session.queueMessage(r);
-                            }
-
-						} else if (channel instanceof Pipe.SourceChannel) {
-
-                            Pipe.SourceChannel sourceChannel = (Pipe.SourceChannel)channel;
-                            RequestHandler requestHandler = (RequestHandler)key.attachment();
-
-                            if (requestHandler == null) {
-                                requestHandler = this.requestHandlerBroker.getHandlerForEngineSourceChannel((Pipe.SourceChannel)channel);
-                                key.attach(requestHandler);
-                            }
-
-                            ResponseMessage container = requestHandler.executeBufferReadEvent();
-
-                            if (container != null) {
-                                Session session = this.sessions.get(container.getSessionId());
-
-                                if (session != null) {
-                                    session.queueMessage(container);
-                                }
-                            }
-
-						}
+                        if (this.enginePointer == this.engineSchedule.length)
+                            this.enginePointer=0;
 
 					}
                     else if (key.isWritable()) {
 
                         SelectableChannel channel = key.channel();
+                        Engine engine = (Engine)key.attachment();
 
-                        if (channel instanceof SocketChannel) {
-
-                            HttpSession session = (HttpSession) key.attachment();
-
-                            // TODO: I assume this channel attachment will be dead on a second request
-                            // TODO: as resolving a socket to a session may not be possible once it's disassociated
-                            // TODO: with the selector. Right now this is somewhat moot because all connections
-                            // TODO: Die after one request (no keepalive).
-
-                            try {
-                                session.socketWriteEvent();
+                        // attach the engine the selection key for later.
+                        if (engine == null) {
+                            for (int i = 0; i < this.engineSchedule.length; i++) {
+                                if (this.engineSchedule[i].getEngineChannelQueue().isThisWriteChannel(channel)) {
+                                    engine = this.engineSchedule[i];
+                                    key.attach(engine);
+                                }
                             }
-                            catch (Exception e) {
-                                this.sessions.remove(session.getSessionId());
-                                session.getChannel().close();
-                            }
-
-                        } else if (channel instanceof Pipe.SinkChannel) {
-
-                            RequestHandler requestHandler = this.requestHandlerBroker.getHandlerForEngineSinkChannel((Pipe.SinkChannel) channel);
-                            key.attach(requestHandler);
-
-                            // TODO: This attachment never works... probably because we unregister below...
-                            // TODO: We need to make the pathing between the Server and the handler a little
-                            // TODO: Faster than this potentially.
-
-                            if (!requestHandler.executeRequestWriteEvent()) {
-                                channel.register(selector, 0);
-                            }
-
                         }
 
-					}
+                        engine.getEngineChannelQueue().sendObject(null);
+
+                    }
 
 					ki.remove();
 
@@ -215,14 +141,10 @@ public class Server implements Runnable {
 
 			}
 
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			System.exit(-1);
-		} catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            System.exit(-1);
-        }
-
+		}
 
 	}
 
