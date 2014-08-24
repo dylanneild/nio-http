@@ -58,7 +58,7 @@ On Ubuntu 14.04, out of the box, serving 1M requests to 10,000 connections:
 * Nginx: 11,733 requests per second.
 * NIO-HTTP: 18,150 requests per second.
 
-Nginx can, of course, scale to very high levels when fine tuned but these numbers should show that NIO-HTTP performance is already very good.
+Nginx can, of course, scale to very high levels when fine tuned but these numbers should show that NIO-HTTP performance is already very good. Additionally, other benchmarking suites show Nginx on the same hardware scoring much better benchmarking scores. These numbers aren't intended to show that NIO-HTTP is faster than Nginx; they are simply intended to demonstrate that using NIO-HTTP in your project will not automatically create performance problems.
 
 ### Architecture
 
