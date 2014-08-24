@@ -14,6 +14,10 @@ public class ResponseContent implements ResponseMessage {
 		return buffer;
 	}
 
+    public void setBuffer(byte[] buffer) {
+        this.buffer = buffer;
+    }
+
     @Override
     public long getSessionId() {
         return bufferHeader.getSessionId();

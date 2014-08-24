@@ -199,7 +199,9 @@ public class HttpSession extends Session {
 
         if (this.writeBufferLastPacket) {
             if (this.writeRequest != null && this.writeRequest.isKeepAlive()) {
-                shouldClose = false;
+                if (this.writeResponse != null && !this.writeResponse.isConnectionClosed()) {
+                    shouldClose = false;
+                }
             }
         } else {
             shouldClose = false;

@@ -17,6 +17,7 @@ import java.nio.channels.*;
 import java.nio.file.*;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ExecutionException;
 
@@ -32,12 +33,27 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
     public abstract String getDirectoryHeader(Request request);
     public abstract String getDirectoryListing(Request request, DirectoryMember directoryMember);
     public abstract String getDirectoryFooter(Request request);
+    public abstract List<String> getDirectoryIndexes();
 
     public BaseFileSystemRequestHandler() throws HandlerInitException {
         super();
         this.tasks = new LinkedList<FileRequestObject>();
         this.fileSystem = FileSystems.getDefault();
         this.mimeTypes = MimeTypes.getInstance();
+    }
+
+    private Path validatePath(Path path) throws NotFoundException, ForbiddenException {
+        // is this even a file?
+        if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) && !Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+            throw new NotFoundException();
+        }
+
+        // is this readable?
+        if (!Files.isReadable(path)) {
+            throw new ForbiddenException();
+        }
+
+        return path;
     }
 
     private Path getRatifiedFilePath(String requestUri) throws BadRequestException, ForbiddenException, NotFoundException {
@@ -60,19 +76,21 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
         Path path = this.fileSystem.getPath(this.getFilePath(), prefixRemoved);
 
-        // is this even a file?
-        if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) && !Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
-            throw new NotFoundException();
+        // is this a directory?
+        if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+            List<String> indexes = this.getDirectoryIndexes();
+
+            if (indexes != null) {
+                for (String index : indexes) {
+                    try {
+                        return validatePath(path.resolve(index));
+                    }
+                    catch (NotFoundException | ForbiddenException e) {}
+                }
+            }
         }
 
-        // is this readable?
-        if (!Files.isReadable(path)) {
-            throw new ForbiddenException();
-        }
-
-        // TODO: This is where we'd ratify to see if there was an index file...
-
-        return path;
+        return this.validatePath(path);
 
     }
 
@@ -81,7 +99,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
         return "File System Handler";
     }
 
-    private void sendException(HttpException e, Request request, Selector selector) throws IOException, InterruptedException {
+    private void sendException(HttpException e, Request request) throws IOException, InterruptedException {
         this.getEngineQueue().sendObject(ResponseFactory.createResponse(e, request));
     }
 
@@ -103,7 +121,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
             }
         } catch (Exception e) {
-            this.sendException(new InternalServerErrorException(e), request, selector);
+            this.sendException(new InternalServerErrorException(e), request);
         }
 
         html.append(this.getDirectoryFooter(request));
@@ -131,7 +149,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
         if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
 
             if (!isDirectoryListingsGenerated()) {
-                this.sendException(new ForbiddenException(), request, selector);
+                this.sendException(new ForbiddenException(), request);
             } else {
                 serviceDirectoryRequest(path, request, selector);
             }
@@ -167,7 +185,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
                 this.tasks.add(task);
             } catch (Exception e) {
                 task.close();
-                this.sendException(new InternalServerErrorException(e), request, selector);
+                this.sendException(new InternalServerErrorException(e), request);
             }
         }
 
@@ -255,7 +273,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
                                     this.engineQueue.setContinueWriteNotifications(true);
                                     this.serviceFileRequest(getRatifiedFilePath(request.getRequestURI().getPath()), request, selector);
                                 } catch (HttpException e) {
-                                    this.sendException(e, request, selector);
+                                    this.sendException(e, request);
                                 }
                             }
 

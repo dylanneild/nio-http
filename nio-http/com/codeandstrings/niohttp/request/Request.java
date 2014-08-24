@@ -53,6 +53,8 @@ public class Request {
 
         if (connection == null) {
             if (this.header.getProtocol() == HttpProtocol.HTTP1_1) {
+                // http 1.1 and we'll default to keep-alive
+                // can't see why not.
                 return true;
             } else {
                 return false;

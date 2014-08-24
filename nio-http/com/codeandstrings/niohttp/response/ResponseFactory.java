@@ -45,13 +45,12 @@ public class ResponseFactory {
     public static Response createResponseNotModified(Request request, Date lastModified, String etag) {
 
         HttpProtocol protocol = request.getRequestProtocol();
-        RequestMethod method = request.getRequestMethod();
 
         if (protocol == HttpProtocol.HTTP0_9) {
             return null;
         }
 
-        Response r = new Response(request, protocol, method);
+        Response r = new Response(request);
 
         r.setCode(304);
         r.setDescription("Not Modified");
@@ -75,10 +74,7 @@ public class ResponseFactory {
 
     private static Response createBasicResponse(Request request) {
 
-        HttpProtocol protocol = request.getRequestProtocol();
-        RequestMethod requestMethod = request.getRequestMethod();
-
-        Response r = new Response(request, protocol, requestMethod);
+        Response r = new Response(request);
 
         r.setCode(200);
         r.setDescription("OK");
@@ -108,9 +104,9 @@ public class ResponseFactory {
             r.addHeader("Connection", "close");
             r.addHeader("Content-Type", contentType);
         }
-        else {
-            r.addHeader("Transfer-Encoding", "chunked");
-        }
+
+        // leave no content type - the filter system will
+        // automatically add transfer-encoding: chunked and chunk the stream
 
         return r;
 
@@ -118,7 +114,6 @@ public class ResponseFactory {
 
     public static Response createResponse(String contentType, long contentSize, Request request) {
 
-        HttpProtocol protocol = request.getRequestProtocol();
         Response r = createBasicResponse(request);
 
         r.addHeader("Content-Type", contentType);
@@ -129,7 +124,7 @@ public class ResponseFactory {
     }
 
 	public static Response createResponse(HttpException e, Request request) {
-		return (new ExceptionResponseFactory(e)).create(request.getSessionId(), request.getServerParameters());
+		return (new ExceptionResponseFactory(e)).create(request);
 	}
 
 }

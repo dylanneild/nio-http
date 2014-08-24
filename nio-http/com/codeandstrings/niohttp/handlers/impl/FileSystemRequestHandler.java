@@ -7,12 +7,19 @@ import com.codeandstrings.niohttp.request.Request;
 
 import java.net.URLEncoder;
 import java.text.NumberFormat;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 
 public abstract class FileSystemRequestHandler extends BaseFileSystemRequestHandler {
 
     protected FileSystemRequestHandler() throws HandlerInitException {
         super();
+    }
+
+    @Override
+    public List<String> getDirectoryIndexes() {
+        return Arrays.asList("index.html");
     }
 
     @Override

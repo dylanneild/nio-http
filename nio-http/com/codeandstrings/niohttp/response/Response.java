@@ -36,8 +36,8 @@ public class Response implements ResponseMessage {
         this.configureFromConstructor(sessionId, protocol, method);
     }
 
-	public Response(Request request, HttpProtocol protocol, RequestMethod method) {
-        this.configureFromConstructor(request.getSessionId(), protocol, method);
+	public Response(Request request) {
+        this.configureFromConstructor(request.getSessionId(), request.getRequestProtocol(), request.getRequestMethod());
         this.requestId = request.getRequestId();
 	}
 
@@ -73,6 +73,16 @@ public class Response implements ResponseMessage {
         }
     }
 
+    public boolean isConnectionClosed() {
+        String te = headers.getSingleValueCaseInsensitive("connection");
+
+        if (te != null && te.equalsIgnoreCase("close")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     public String getHeaderCaseInsensitive(String header) {
         return this.headers.getSingleValueCaseInsensitive(header);
     }
@@ -100,7 +110,11 @@ public class Response implements ResponseMessage {
 
         Response response = (Response) o;
 
+        if (bodyIncluded != response.bodyIncluded) return false;
         if (code != response.code) return false;
+        if (requestId != response.requestId) return false;
+        if (sessionId != response.sessionId) return false;
+        if (transmitted != response.transmitted) return false;
         if (description != null ? !description.equals(response.description) : response.description != null)
             return false;
         if (headers != null ? !headers.equals(response.headers) : response.headers != null) return false;
@@ -112,7 +126,11 @@ public class Response implements ResponseMessage {
 
     @Override
     public int hashCode() {
-        int result = protocol != null ? protocol.hashCode() : 0;
+        int result = (int) (sessionId ^ (sessionId >>> 32));
+        result = 31 * result + (int) (requestId ^ (requestId >>> 32));
+        result = 31 * result + (transmitted ? 1 : 0);
+        result = 31 * result + (bodyIncluded ? 1 : 0);
+        result = 31 * result + (protocol != null ? protocol.hashCode() : 0);
         result = 31 * result + (method != null ? method.hashCode() : 0);
         result = 31 * result + code;
         result = 31 * result + (description != null ? description.hashCode() : 0);
@@ -123,7 +141,11 @@ public class Response implements ResponseMessage {
     @Override
     public String toString() {
         return "Response{" +
-                "protocol=" + protocol +
+                "sessionId=" + sessionId +
+                ", requestId=" + requestId +
+                ", transmitted=" + transmitted +
+                ", bodyIncluded=" + bodyIncluded +
+                ", protocol=" + protocol +
                 ", method=" + method +
                 ", code=" + code +
                 ", description='" + description + '\'' +
@@ -131,7 +153,7 @@ public class Response implements ResponseMessage {
                 '}';
     }
 
-	public void setCode(int code) {
+    public void setCode(int code) {
 		this.code = code;
 	}
 
@@ -143,7 +165,12 @@ public class Response implements ResponseMessage {
         if (this.protocol != HttpProtocol.HTTP0_9) {
             StringBuilder r = new StringBuilder();
 
-            r.append("HTTP/1.1 ");
+            if (this.protocol == HttpProtocol.HTTP1_0) {
+                r.append("HTTP/1.0 ");
+            } else {
+                r.append("HTTP/1.1 ");
+            }
+
             r.append(this.code);
             r.append(" ");
             r.append(this.description);

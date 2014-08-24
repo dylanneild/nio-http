@@ -105,11 +105,6 @@ class FileRequestObject {
             this.position = this.position + this.future.get().intValue();
         }
 
-        // TODO: This is a 64k buffer - at 8k, the system is almost 1/4 as fast.
-        // TODO: Ergo, this is a highly tunable value. Perhaps integrating this
-        // TODO: Into the parameters system somehow down the line might be of
-        // TODO: value.
-
         this.readBuffer = ByteBuffer.allocate(IdealBlockSize.MAX_BUFFER);
         this.future = this.fileChannel.read(this.readBuffer, position);
     }
