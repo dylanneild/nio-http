@@ -11,6 +11,9 @@ import java.nio.charset.Charset;
 
 public class ChunkedTransferHttpFilter extends HttpFilter {
 
+    private static final byte[] finalTerminator = { 13, 10, 48, 13, 10, 13, 10 };
+    private static final byte[] terminator = { 13, 10  };
+
     @Override
     public boolean shouldFilter(Request request, Response response) {
 
@@ -61,11 +64,9 @@ public class ChunkedTransferHttpFilter extends HttpFilter {
 
         // add footer
         if (content.isLastBufferForRequest()) {
-            byte footer[] = { 13, 10, 48, 13, 10, 13, 10 };
-            content.setFooterBuffer(footer);
+            content.setFooterBuffer(finalTerminator);
         } else {
-            byte footer[] = { 13, 10 };
-            content.setFooterBuffer(footer);
+            content.setFooterBuffer(terminator);
         }
 
     }
