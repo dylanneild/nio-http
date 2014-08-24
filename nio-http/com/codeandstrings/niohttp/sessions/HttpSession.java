@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -347,8 +348,6 @@ public class HttpSession extends Session {
             this.writeBuffer.put(responseContent.getFooterBuffer());
 
         this.writeBuffer.flip();
-
-        this.writeBuffer = ByteBuffer.wrap(responseContent.getBuffer());
     }
 
     private final void socketWriteQueueAdditional() throws ClosedChannelException {

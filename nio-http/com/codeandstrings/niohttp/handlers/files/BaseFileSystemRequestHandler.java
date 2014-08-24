@@ -14,7 +14,9 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
+import java.nio.charset.Charset;
 import java.nio.file.*;
+import java.text.ParseException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -23,7 +25,7 @@ import java.util.concurrent.ExecutionException;
 
 public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
-    private Queue<FileRequestObject> tasks;
+    private Queue<Object> tasks;
     private FileSystem fileSystem;
     private MimeTypes mimeTypes;
 
@@ -37,7 +39,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
     public BaseFileSystemRequestHandler() throws HandlerInitException {
         super();
-        this.tasks = new LinkedList<FileRequestObject>();
+        this.tasks = new LinkedList<>();
         this.fileSystem = FileSystems.getDefault();
         this.mimeTypes = MimeTypes.getInstance();
     }
@@ -103,33 +105,36 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
         this.getEngineQueue().sendObject(ResponseFactory.createResponse(e, request));
     }
 
-    private void serviceDirectoryRequest(Path path, Request request, Selector selector) throws Exception {
+    private void serviceDirectoryRequest(Path path, Request request) throws Exception {
 
-        StringBuilder html = new StringBuilder();
+        if (request.getRequestMethod() == RequestMethod.HEAD) {
+            Response r = ResponseFactory.createResponse("text/html", 0, request);
+            r.setBodyIncluded(false);
+            this.engineQueue.sendObject(r);
+        }
+        else {
 
-        html.append(this.getDirectoryHeader(request));
+            Response r = ResponseFactory.createStreamingResponse("text/html", request);
+            byte headerBytes[] = this.getDirectoryHeader(request).getBytes(Charset.forName("UTF-8"));
+            ResponseContent directoryHeader = new ResponseContent(request.getSessionId(), request.getRequestId(), headerBytes, false);
 
-        try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(path)) {
-            for (Path filePath : directoryStream) {
+            this.engineQueue.sendObject(r);
+            this.engineQueue.sendObject(directoryHeader);
 
-                String directoryEntry = this.getDirectoryListing(request,
-                        new DirectoryMember(filePath,
-                                this.mimeTypes.getMimeTypeForFilename(filePath.getFileName().toString())));
+            DirectoryRequestObject task = new DirectoryRequestObject(this.mimeTypes, path, request);
 
-                if (directoryEntry != null)
-                    html.append(directoryEntry);
+            if (task.hasNextMember()) {
+                tasks.add(task);
+            } else {
+
+                // no files in the directory anyways...
+                byte footerBytes[] = this.getDirectoryFooter(request).getBytes(Charset.forName("UTF-8"));
+                ResponseContent directoryFooter = new ResponseContent(request.getSessionId(), request.getRequestId(), footerBytes, true);
+                this.engineQueue.sendObject(directoryFooter);
 
             }
-        } catch (Exception e) {
-            this.sendException(new InternalServerErrorException(e), request);
+
         }
-
-        html.append(this.getDirectoryFooter(request));
-
-        StringResponseFactory factory = new StringResponseFactory(request, "text/html", html.toString());
-
-        this.getEngineQueue().sendObject(factory.getHeader());
-        this.getEngineQueue().sendObject(factory.getBody());
 
     }
 
@@ -143,19 +148,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
     }
 
-    private final void serviceFileRequest(Path path, Request request, Selector selector) throws Exception {
-
-        // we handle directories differently
-        if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
-
-            if (!isDirectoryListingsGenerated()) {
-                this.sendException(new ForbiddenException(), request);
-            } else {
-                serviceDirectoryRequest(path, request, selector);
-            }
-
-            return;
-        }
+    private final void serviceFileRequest(Path path, Request request) throws Exception {
 
         // allocate a task and start the reading process
         FileRequestObject task = new FileRequestObject(path, this.mimeTypes.getMimeTypeForFilename(path.toString()), request);
@@ -171,6 +164,12 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             // we now have a task and it's readying data;
             r = ResponseFactory.createResponse(task.getMimeType(), task.getFileSize(), request);
             BaseFileSystemRequestHandler.addFileInformationToRequest(task, r);
+
+            if (skipBody) {
+                r.setBodyIncluded(false);
+            }
+
+
         }
 
         this.getEngineQueue().sendObject(r);
@@ -188,18 +187,24 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
                 this.sendException(new InternalServerErrorException(e), request);
             }
         }
+    }
+
+    private final void serviceRequest(Path path, Request request) throws Exception {
+
+        // we handle directories differently
+        if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+            if (!isDirectoryListingsGenerated()) {
+                this.sendException(new ForbiddenException(), request);
+            } else {
+                serviceDirectoryRequest(path, request);
+            }
+        } else {
+            serviceFileRequest(path, request);
+        }
 
     }
 
-    private boolean executeFileReadProcedure(Selector selector) throws ExecutionException, InterruptedException, IOException {
-
-        // there are no further write events to execute;
-        // let's see if there are more file read events to refill the buffers
-        FileRequestObject task = this.tasks.poll();
-
-        if (task == null) {
-            return false;
-        }
+    private void executeFileReadProcedure(FileRequestObject task) throws ExecutionException, InterruptedException, IOException {
 
         // the current buffer is ready.
         if (!task.isBufferReady()) {
@@ -239,7 +244,64 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             }
         }
 
-        return true;
+    }
+
+    private void executeDirectoryReadProcedure(DirectoryRequestObject task) throws IOException, ParseException, InterruptedException {
+
+        DirectoryMember directoryMember = task.next();
+
+        if (directoryMember == null) {
+            this.tasks.add(task);
+            return;
+        }
+
+        Request request = task.getRequest();
+        String listingContents = this.getDirectoryListing(request, directoryMember);
+
+        // is this file hidden?
+        if (listingContents != null) {
+
+            // this is not a hidden file
+            byte listingContentsBytes[] = listingContents.getBytes(Charset.forName("UTF-8"));
+            ResponseContent r = new ResponseContent(request.getSessionId(), request.getRequestId(), listingContentsBytes, false);
+            this.getEngineQueue().sendObject(r);
+
+        }
+
+        if (task.hasNextMember()) {
+            this.tasks.add(task);
+        } else {
+
+            // close the task
+            task.close();
+
+            String directoryFooter = this.getDirectoryFooter(request);
+            byte directoryFooterBytes[] = directoryFooter.getBytes(Charset.forName("UTF-8"));
+            ResponseContent r = new ResponseContent(request.getSessionId(), request.getRequestId(), directoryFooterBytes, true);
+            this.getEngineQueue().sendObject(r);
+
+        }
+
+
+    }
+
+    private boolean executeReadProcedure() throws ExecutionException, InterruptedException, IOException, ParseException {
+
+        // there are no further write events to execute;
+        // let's see if there are more file read events to refill the buffers
+        Object task = this.tasks.poll();
+
+        if (task == null) {
+            return false;
+        }
+
+        if (task instanceof DirectoryRequestObject) {
+            this.executeDirectoryReadProcedure((DirectoryRequestObject) task);
+        } else {
+            this.executeFileReadProcedure((FileRequestObject)task);
+        }
+
+        return tasks.size() > 0;
 
     }
 
@@ -271,7 +333,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
                             if (request != null) {
                                 try {
                                     this.engineQueue.setContinueWriteNotifications(true);
-                                    this.serviceFileRequest(getRatifiedFilePath(request.getRequestURI().getPath()), request, selector);
+                                    this.serviceRequest(getRatifiedFilePath(request.getRequestURI().getPath()), request);
                                 } catch (HttpException e) {
                                     this.sendException(e, request);
                                 }
@@ -283,10 +345,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
                         this.engineQueue.sendObject(null);
 
-                        boolean file = this.executeFileReadProcedure(selector);
-                        boolean directory = false;
-
-                        if (!file && !directory) {
+                        if (!this.executeReadProcedure()) {
                             this.engineQueue.setContinueWriteNotifications(false);
                         }
 

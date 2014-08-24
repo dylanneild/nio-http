@@ -102,8 +102,9 @@ public class ResponseFactory {
             // we can't rely on chunked to mark the end of the request
             r.removeHeader("Connection");
             r.addHeader("Connection", "close");
-            r.addHeader("Content-Type", contentType);
         }
+
+        r.addHeader("Content-Type", contentType);
 
         // leave no content type - the filter system will
         // automatically add transfer-encoding: chunked and chunk the stream

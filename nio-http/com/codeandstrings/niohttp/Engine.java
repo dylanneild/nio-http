@@ -7,6 +7,7 @@ import com.codeandstrings.niohttp.exceptions.InvalidHandlerException;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
 import com.codeandstrings.niohttp.exceptions.http.NotFoundException;
 import com.codeandstrings.niohttp.exceptions.tcp.CloseConnectionException;
+import com.codeandstrings.niohttp.filters.HttpFilter;
 import com.codeandstrings.niohttp.handlers.base.RequestHandler;
 import com.codeandstrings.niohttp.handlers.broker.RequestHandlerBroker;
 import com.codeandstrings.niohttp.request.Request;
@@ -20,14 +21,17 @@ import com.codeandstrings.niohttp.wire.ChannelQueue;
 import java.io.IOException;
 import java.net.StandardSocketOptions;
 import java.nio.channels.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 
 public class Engine extends Thread {
 
 	private Parameters parameters;
     private HashMap<Long,Session> sessions;
     private RequestHandlerBroker requestHandlerBroker;
+    private List<HttpFilter> filters;
     private ChannelQueue channelQueue;
     private Selector selector;
 
@@ -35,6 +39,7 @@ public class Engine extends Thread {
 
         this.parameters = parameters.copy();
         this.sessions = new HashMap<Long,Session>();
+        this.filters = new ArrayList<>();
 
         try {
             this.selector = Selector.open();
@@ -53,6 +58,10 @@ public class Engine extends Thread {
 	public void addRequestHandler(String path, Class handler) throws InvalidHandlerException, HandlerInitException {
         this.requestHandlerBroker.addHandler(path, handler);
 	}
+
+    public void addFilter(HttpFilter filter) {
+        this.filters.add(filter);
+    }
 
     private void executeChannelReadFromServer(SelectableChannel channel) throws IOException {
         if (this.channelQueue.shouldReadObject()) {
@@ -121,7 +130,25 @@ public class Engine extends Thread {
                 Session session = this.sessions.get(container.getSessionId());
 
                 if (session != null) {
-                    session.queueMessage(container);
+
+                    Request request = session.getRequest(container.getRequestId());
+                    Response response = null;
+
+                    if (container instanceof  Response) {
+                        response = (Response)container;
+                    } else {
+                        response = session.getResponse(request.getRequestId());
+                    }
+
+                    // run any applicable filters
+                    if (request != null && response != null) {
+                        for (HttpFilter filter : this.filters) {
+                            if (filter.shouldFilter(request, response))
+                                filter.filter(request, container);
+                        }
+
+                        session.queueMessage(container);
+                    }
                 }
             }
         }
