@@ -73,6 +73,7 @@ public class Engine extends Thread {
 
     private void cleanupAndCloseSession(Session session) throws IOException {
         this.cleanupFilters(session.getSessionId());
+        session.setSessionFinished(true);
         session.getChannel().close();
     }
 
@@ -165,7 +166,11 @@ public class Engine extends Thread {
                                 filter.filter(request, container);
                         }
 
-                        session.queueMessage(container);
+                        if (!session.isSessionFinished()) {
+                            session.queueMessage(container);
+                        } else {
+                            System.out.println("Session closed?");
+                        }
                     }
                 }
             }

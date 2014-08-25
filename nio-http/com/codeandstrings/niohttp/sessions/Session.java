@@ -21,8 +21,10 @@ public abstract class Session {
     /*
      * Session ID Management
      */
+    protected boolean sessionFinished;
     protected static long lastSessionId = 0;
     protected long sessionId;
+
     /*
      * Our channel and selector
      */
@@ -77,6 +79,14 @@ public abstract class Session {
         return r;
     }
 
+    public boolean isSessionFinished() {
+        return sessionFinished;
+    }
+
+    public void setSessionFinished(boolean sessionFinished) {
+        this.sessionFinished = sessionFinished;
+    }
+
     public SocketChannel getChannel() {
         return this.channel;
     }
@@ -112,7 +122,12 @@ public abstract class Session {
             this.contentQueue.add((ResponseContent)message);
         }
 
-        this.setSelectionRequest(true);
+        try {
+            this.setSelectionRequest(true);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
 
     }
 
