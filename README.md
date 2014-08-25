@@ -1,7 +1,7 @@
 nio-http
 ========
 
-A hybrid design HTTP server library for Java 7+.
+A hybrid non-blocking / threaded HTTP server library for Java 7+.
 
 * HTTP/1.1 Server
 * Will handle tens of thousands of connections
