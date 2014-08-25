@@ -2,29 +2,30 @@ package com.codeandstrings.niohttp.response;
 
 import com.codeandstrings.niohttp.request.Request;
 
+import java.lang.ref.WeakReference;
 import java.util.Arrays;
 
 public class ResponseContent implements ResponseMessage {
 
-    private Request request;
-    private Response response;
+    private WeakReference<Request> request;
+    private WeakReference<Response> response;
     private boolean lastBufferForRequest;
 	private byte[] buffer;
     private byte[] headerBuffer;
     private byte[] footerBuffer;
 
     public ResponseContent(Request request, byte[] buffer, boolean lastBufferForRequest) {
-        this.request = request;
+        this.request = new WeakReference<>(request);
         this.lastBufferForRequest = lastBufferForRequest;
         this.buffer = buffer;
     }
 
     public Response getReponse() {
-        return this.response;
+        return this.response == null ? null : this.response.get();
     }
 
     public void setResponse(Response response) {
-        this.response = response;
+        this.response = new WeakReference<>(response);
     }
 
     public byte[] getHeaderBuffer() {
@@ -52,11 +53,11 @@ public class ResponseContent implements ResponseMessage {
     }
 
     public Request getRequest() {
-        return request;
+        return request == null ? null : request.get();
     }
 
     public void setRequest(Request request) {
-        this.request = request;
+        this.request = new WeakReference<Request>(request);
     }
 
     public boolean isLastBufferForRequest() {

@@ -102,7 +102,6 @@ public abstract class Session {
         if (message instanceof Response) {
 
             Response response = (Response)message;
-
             this.responseQueue.add(response);
 
             if (response.getRequest() != null) {
