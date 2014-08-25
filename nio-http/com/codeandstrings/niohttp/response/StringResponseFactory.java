@@ -27,12 +27,13 @@ public class StringResponseFactory {
 
     private void fabricateBody() {
         byte bytes[] = this.response.getBytes(Charset.forName("UTF-8"));
-        this.body = new ResponseContent(this.request.getSessionId(), this.request.getRequestId(), bytes, true);
+        this.body = new ResponseContent(this.request, bytes, true);
     }
 
     private void fabricate() {
         this.fabricateBody();
         this.fabricateHeader();
+        this.body.setResponse(this.header);
     }
 
     public StringResponseFactory(Request request, String contentType, String response) {

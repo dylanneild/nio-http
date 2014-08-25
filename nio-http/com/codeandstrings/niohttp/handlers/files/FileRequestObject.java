@@ -4,6 +4,7 @@ import com.codeandstrings.niohttp.data.DateUtils;
 import com.codeandstrings.niohttp.data.FileUtils;
 import com.codeandstrings.niohttp.data.IdealBlockSize;
 import com.codeandstrings.niohttp.request.Request;
+import com.codeandstrings.niohttp.response.Response;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -26,8 +27,8 @@ class FileRequestObject {
     private String mimeType;
     private Date lastModified;
     private String etag;
-    private long requestId;
-    private long sessionId;
+    private Request request;
+    private Response response;
     private long nextSequence;
 
     public FileRequestObject(Path path, String mimeType, Request request) throws IOException {
@@ -35,8 +36,7 @@ class FileRequestObject {
         this.fileSize = Files.size(path);
         this.position = 0;
         this.mimeType = mimeType;
-        this.requestId = request.getRequestId();
-        this.sessionId = request.getSessionId();
+        this.request = request;
         this.nextSequence = 0;
         this.lastModified = new Date(Files.getLastModifiedTime(path, LinkOption.NOFOLLOW_LINKS).toMillis());
         this.etag = FileUtils.computeEtag(path.getFileName().toString(), this.lastModified);
@@ -48,6 +48,14 @@ class FileRequestObject {
         } catch (Exception e) {}
     }
 
+    public Response getResponse() {
+        return response;
+    }
+
+    public void setResponse(Response response) {
+        this.response = response;
+    }
+
     public Date getLastModified() {
         return lastModified;
     }
@@ -56,12 +64,8 @@ class FileRequestObject {
         return etag;
     }
 
-    public long getRequestId() {
-        return requestId;
-    }
-
-    public long getSessionId() {
-        return sessionId;
+    public Request getRequest() {
+        return request;
     }
 
     public long getNextSequence() {

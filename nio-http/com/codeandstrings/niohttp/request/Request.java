@@ -15,10 +15,11 @@ import com.codeandstrings.niohttp.data.NameValuePair;
 import com.codeandstrings.niohttp.data.Parameters;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
 import com.codeandstrings.niohttp.enums.RequestMethod;
+import com.codeandstrings.niohttp.sessions.Session;
 
 public class Request {
 
-    private long sessionId;
+    private Session session;
     private long requestId;
     private long timestamp;
 	private String remoteAddr;
@@ -29,13 +30,13 @@ public class Request {
 
     public Request() {}
 
-    public static Request generateRequest(long sessionId, long requestId, String remoteAddr,
+    public static Request generateRequest(Session session, long requestId, String remoteAddr,
                                           int remotePort, RequestHeader header,
                                           RequestBody body, Parameters parameters) {
 
 		Request r = new Request();
 
-        r.sessionId = sessionId;
+        r.session = session;
         r.requestId = requestId;
         r.timestamp = System.currentTimeMillis();
 		r.remoteAddr = remoteAddr;
@@ -241,8 +242,8 @@ public class Request {
         return this.requestId;
     }
 
-    public long getSessionId() {
-        return sessionId;
+    public Session getSession() {
+        return session;
     }
 
     public Parameters getServerParameters() {
@@ -258,20 +259,20 @@ public class Request {
 
         if (remotePort != request.remotePort) return false;
         if (requestId != request.requestId) return false;
-        if (sessionId != request.sessionId) return false;
         if (timestamp != request.timestamp) return false;
         if (body != null ? !body.equals(request.body) : request.body != null) return false;
         if (header != null ? !header.equals(request.header) : request.header != null) return false;
         if (remoteAddr != null ? !remoteAddr.equals(request.remoteAddr) : request.remoteAddr != null) return false;
         if (serverParameters != null ? !serverParameters.equals(request.serverParameters) : request.serverParameters != null)
             return false;
+        if (session != null ? !session.equals(request.session) : request.session != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = (int) (sessionId ^ (sessionId >>> 32));
+        int result = session != null ? session.hashCode() : 0;
         result = 31 * result + (int) (requestId ^ (requestId >>> 32));
         result = 31 * result + (int) (timestamp ^ (timestamp >>> 32));
         result = 31 * result + (remoteAddr != null ? remoteAddr.hashCode() : 0);
@@ -285,7 +286,7 @@ public class Request {
     @Override
     public String toString() {
         return "Request{" +
-                "sessionId=" + sessionId +
+                "session=" + session +
                 ", requestId=" + requestId +
                 ", timestamp=" + timestamp +
                 ", remoteAddr='" + remoteAddr + '\'' +

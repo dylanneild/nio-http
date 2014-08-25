@@ -13,6 +13,7 @@ import com.codeandstrings.niohttp.handlers.broker.RequestHandlerBroker;
 import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.response.ExceptionResponseFactory;
 import com.codeandstrings.niohttp.response.Response;
+import com.codeandstrings.niohttp.response.ResponseContent;
 import com.codeandstrings.niohttp.response.ResponseMessage;
 import com.codeandstrings.niohttp.sessions.HttpSession;
 import com.codeandstrings.niohttp.sessions.Session;
@@ -32,7 +33,6 @@ import java.util.List;
 public class Engine extends Thread {
 
 	private Parameters parameters;
-    private HashMap<Long,Session> sessions;
     private RequestHandlerBroker requestHandlerBroker;
     private List<HttpFilter> filters;
     private ChannelQueue channelQueue;
@@ -41,7 +41,6 @@ public class Engine extends Thread {
 	public Engine(Parameters parameters) throws EngineInitException {
 
         this.parameters = parameters.copy();
-        this.sessions = new HashMap<Long,Session>();
         this.filters = new ArrayList<>();
 
         try {
@@ -73,7 +72,6 @@ public class Engine extends Thread {
     }
 
     private void cleanupAndCloseSession(Session session) throws IOException {
-        this.sessions.remove(session.getSessionId());
         this.cleanupFilters(session.getSessionId());
         session.getChannel().close();
     }
@@ -97,7 +95,6 @@ public class Engine extends Thread {
 
         if (session == null) {
             session = new HttpSession((SocketChannel) channel, this.selector, this.parameters);
-            this.sessions.put(session.getSessionId(), session);
             key.attach(session);
         }
 
@@ -141,17 +138,23 @@ public class Engine extends Thread {
             ResponseMessage container = (ResponseMessage)queue.getNextObject();
 
             if (container != null) {
-                Session session = this.sessions.get(container.getSessionId());
+                Session session = container.getRequest().getSession();
 
                 if (session != null) {
 
-                    Request request = session.getRequest(container.getRequestId());
+                    Request request = container.getRequest();
                     Response response = null;
 
-                    if (container instanceof  Response) {
+                    if (container instanceof Response) {
                         response = (Response)container;
                     } else {
-                        response = session.getResponse(request.getRequestId());
+
+                        response = ((ResponseContent)container).getReponse();
+
+                        if (response == null) {
+                            System.out.println("No request found. Looking up.");
+                            response = session.getResponse(request.getRequestId());
+                        }
                     }
 
                     // run any applicable filters

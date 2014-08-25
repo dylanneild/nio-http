@@ -9,9 +9,8 @@ import com.codeandstrings.niohttp.request.Request;
 
 public class Response implements ResponseMessage {
 
+    private Request request;
     private long sessionId;
-    private long requestId;
-    private boolean transmitted;
 
     private boolean bodyIncluded;
 
@@ -23,12 +22,11 @@ public class Response implements ResponseMessage {
 	private HeaderValues headers;
 
     private void configureFromConstructor(long sessionId, HttpProtocol protocol, RequestMethod method) {
-        this.requestId = -1;
+        this.request = null;
         this.sessionId = sessionId;
         this.protocol = protocol;
         this.method = method;
         this.headers = new HeaderValues(true);
-        this.transmitted = false;
         this.bodyIncluded = true;
     }
 
@@ -37,18 +35,13 @@ public class Response implements ResponseMessage {
     }
 
 	public Response(Request request) {
-        this.configureFromConstructor(request.getSessionId(), request.getRequestProtocol(), request.getRequestMethod());
-        this.requestId = request.getRequestId();
+        this.configureFromConstructor(request.getSession().getSessionId(), request.getRequestProtocol(), request.getRequestMethod());
+        this.request = request;
 	}
 
     @Override
-    public long getSessionId() {
-        return sessionId;
-    }
-
-    @Override
-    public long getRequestId() {
-        return requestId;
+    public Request getRequest() {
+        return request;
     }
 
     public boolean isBodyIncluded() {
@@ -104,6 +97,20 @@ public class Response implements ResponseMessage {
 	}
 
     @Override
+    public String toString() {
+        return "Response{" +
+                "request=" + request +
+                ", sessionId=" + sessionId +
+                ", bodyIncluded=" + bodyIncluded +
+                ", protocol=" + protocol +
+                ", method=" + method +
+                ", code=" + code +
+                ", description='" + description + '\'' +
+                ", headers=" + headers +
+                '}';
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
@@ -112,23 +119,21 @@ public class Response implements ResponseMessage {
 
         if (bodyIncluded != response.bodyIncluded) return false;
         if (code != response.code) return false;
-        if (requestId != response.requestId) return false;
         if (sessionId != response.sessionId) return false;
-        if (transmitted != response.transmitted) return false;
         if (description != null ? !description.equals(response.description) : response.description != null)
             return false;
         if (headers != null ? !headers.equals(response.headers) : response.headers != null) return false;
         if (method != response.method) return false;
         if (protocol != response.protocol) return false;
+        if (request != null ? !request.equals(response.request) : response.request != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = (int) (sessionId ^ (sessionId >>> 32));
-        result = 31 * result + (int) (requestId ^ (requestId >>> 32));
-        result = 31 * result + (transmitted ? 1 : 0);
+        int result = request != null ? request.hashCode() : 0;
+        result = 31 * result + (int) (sessionId ^ (sessionId >>> 32));
         result = 31 * result + (bodyIncluded ? 1 : 0);
         result = 31 * result + (protocol != null ? protocol.hashCode() : 0);
         result = 31 * result + (method != null ? method.hashCode() : 0);
@@ -136,21 +141,6 @@ public class Response implements ResponseMessage {
         result = 31 * result + (description != null ? description.hashCode() : 0);
         result = 31 * result + (headers != null ? headers.hashCode() : 0);
         return result;
-    }
-
-    @Override
-    public String toString() {
-        return "Response{" +
-                "sessionId=" + sessionId +
-                ", requestId=" + requestId +
-                ", transmitted=" + transmitted +
-                ", bodyIncluded=" + bodyIncluded +
-                ", protocol=" + protocol +
-                ", method=" + method +
-                ", code=" + code +
-                ", description='" + description + '\'' +
-                ", headers=" + headers +
-                '}';
     }
 
     public void setCode(int code) {

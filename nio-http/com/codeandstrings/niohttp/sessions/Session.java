@@ -105,8 +105,8 @@ public abstract class Session {
 
             this.responseQueue.add(response);
 
-            if (response.getRequestId() >= 0) {
-                this.responseMap.put(response.getRequestId(), response);
+            if (response.getRequest() != null) {
+                this.responseMap.put(response.getRequest().getRequestId(), response);
             }
 
         } else {

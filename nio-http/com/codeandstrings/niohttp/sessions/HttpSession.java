@@ -6,7 +6,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -89,7 +88,7 @@ public class HttpSession extends Session {
         InetSocketAddress remote = (InetSocketAddress) this.channel
                 .getRemoteAddress();
 
-        Request r = Request.generateRequest(this.getSessionId(), this.getNextRequestId(),
+        Request r = Request.generateRequest(this, this.getNextRequestId(),
                 remote.getHostString(), remote.getPort(), headerFactory.build(),
                 bodyFactory.build(), this.parameters);
 
@@ -222,8 +221,8 @@ public class HttpSession extends Session {
         this.socketWritePartialClear();
 
         if (this.writeResponse != null) {
-            if (this.writeResponse.getRequestId() >= 0) {
-                this.responseMap.remove(this.writeResponse.getRequestId());
+            if (this.writeResponse.getRequest() != null) {
+                this.responseMap.remove(this.writeResponse.getRequest().getRequestId());
             }
         }
 
@@ -315,7 +314,7 @@ public class HttpSession extends Session {
 
             Response r = itr.next();
 
-            if (r.getRequestId() == this.writeRequest.getRequestId()) {
+            if (r.getRequest().getRequestId() == this.writeRequest.getRequestId()) {
                 this.writeResponse = r;
                 itr.remove();
                 break;
@@ -356,7 +355,7 @@ public class HttpSession extends Session {
 
         while (iterator.hasNext()) {
             ResponseContent responseContent = iterator.next();
-            if (responseContent.getRequestId() == this.writeRequest.getRequestId()) {
+            if (responseContent.getRequest().getRequestId() == this.writeRequest.getRequestId()) {
                 this.socketWriteConvertResponseContent(responseContent);
                 iterator.remove();
                 break;
