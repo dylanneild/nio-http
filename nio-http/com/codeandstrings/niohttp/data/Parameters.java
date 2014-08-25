@@ -1,13 +1,14 @@
 package com.codeandstrings.niohttp.data;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
+public class Parameters {
 
-public class Parameters implements Externalizable {
-
-    private static final long serialVersionUID = 9070633037021307477L;
+    private int port;
+	private String serverString;
+	private String serverIp;
+	private int maximumPostSize;
+    private int connectionBacklog;
+    private boolean tcpNoDelay;
+    private boolean enableCompression;
 
     public Parameters copy() {
         Parameters r = new Parameters();
@@ -16,31 +17,9 @@ public class Parameters implements Externalizable {
         r.serverIp = String.valueOf(this.serverIp);
         r.maximumPostSize = this.maximumPostSize;
         r.connectionBacklog = this.connectionBacklog;
+        r.tcpNoDelay = this.tcpNoDelay;
+        r.enableCompression = this.enableCompression;
         return r;
-    }
-
-    private int port;
-	private String serverString;
-	private String serverIp;
-	private int maximumPostSize;
-    private int connectionBacklog;
-
-    @Override
-    public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeInt(this.port);
-        out.writeObject(this.serverString == null ? "" : this.serverString);
-        out.writeObject(this.serverIp == null ? "" : this.serverIp);
-        out.writeInt(this.maximumPostSize);
-        out.writeInt(this.connectionBacklog);
-    }
-
-    @Override
-    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        this.port = in.readInt();
-        this.serverString = (String)in.readObject();
-        this.serverIp = (String)in.readObject();
-        this.maximumPostSize = in.readInt();
-        this.connectionBacklog = in.readInt();
     }
 
     private void configureDefaultParameters() {
@@ -49,6 +28,8 @@ public class Parameters implements Externalizable {
 		this.serverIp = null;
 		this.maximumPostSize = (8 * 1024 * 1024);
         this.connectionBacklog = 16 * 1024;
+        this.tcpNoDelay = true;
+        this.enableCompression = true;
 	}
 
 	public static Parameters getDefaultParameters() {
@@ -63,6 +44,18 @@ public class Parameters implements Externalizable {
         this.configureDefaultParameters();
         this.port = port;
 	}
+
+    public boolean isTcpNoDelay() {
+        return tcpNoDelay;
+    }
+
+    public void setTcpNoDelay(boolean tcpNoDelay) {
+        this.tcpNoDelay = tcpNoDelay;
+    }
+
+    public void setConnectionBacklog(int connectionBacklog) {
+        this.connectionBacklog = connectionBacklog;
+    }
 
     public int getConnectionBacklog() {
         return connectionBacklog;
@@ -100,6 +93,14 @@ public class Parameters implements Externalizable {
 		this.maximumPostSize = maximumPostSize;
 	}
 
+    public boolean isEnableCompression() {
+        return enableCompression;
+    }
+
+    public void setEnableCompression(boolean enableCompression) {
+        this.enableCompression = enableCompression;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -107,8 +108,11 @@ public class Parameters implements Externalizable {
 
         Parameters that = (Parameters) o;
 
+        if (connectionBacklog != that.connectionBacklog) return false;
+        if (enableCompression != that.enableCompression) return false;
         if (maximumPostSize != that.maximumPostSize) return false;
         if (port != that.port) return false;
+        if (tcpNoDelay != that.tcpNoDelay) return false;
         if (serverIp != null ? !serverIp.equals(that.serverIp) : that.serverIp != null) return false;
         if (serverString != null ? !serverString.equals(that.serverString) : that.serverString != null) return false;
 
@@ -121,6 +125,9 @@ public class Parameters implements Externalizable {
         result = 31 * result + (serverString != null ? serverString.hashCode() : 0);
         result = 31 * result + (serverIp != null ? serverIp.hashCode() : 0);
         result = 31 * result + maximumPostSize;
+        result = 31 * result + connectionBacklog;
+        result = 31 * result + (tcpNoDelay ? 1 : 0);
+        result = 31 * result + (enableCompression ? 1 : 0);
         return result;
     }
 
@@ -131,6 +138,9 @@ public class Parameters implements Externalizable {
                 ", serverString='" + serverString + '\'' +
                 ", serverIp='" + serverIp + '\'' +
                 ", maximumPostSize=" + maximumPostSize +
+                ", connectionBacklog=" + connectionBacklog +
+                ", tcpNoDelay=" + tcpNoDelay +
+                ", enableCompression=" + enableCompression +
                 '}';
     }
 }

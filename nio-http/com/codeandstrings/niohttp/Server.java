@@ -10,6 +10,9 @@ import com.codeandstrings.niohttp.exceptions.EngineInitException;
 import com.codeandstrings.niohttp.exceptions.HandlerInitException;
 import com.codeandstrings.niohttp.exceptions.InsufficientConcurrencyException;
 import com.codeandstrings.niohttp.exceptions.InvalidHandlerException;
+import com.codeandstrings.niohttp.filters.HttpFilter;
+import com.codeandstrings.niohttp.filters.impl.ChunkedTransferHttpFilter;
+import com.codeandstrings.niohttp.filters.impl.GzipHttpFilter;
 
 public class Server implements Runnable {
 
@@ -66,6 +69,12 @@ public class Server implements Runnable {
         }
 	}
 
+    public void addFilter(HttpFilter filter) {
+        for (Engine engine : this.engineSchedule) {
+            engine.addFilter(filter);
+        }
+    }
+
 	private void configureServerSocketChannel() throws IOException {
 		this.serverSocketChannel = ServerSocketChannel.open();
 		this.serverSocketChannel.configureBlocking(false);
@@ -74,6 +83,17 @@ public class Server implements Runnable {
 
 	@Override
 	public void run() {
+
+        /* Add mandatory filters */
+        for (Engine engine : this.engineSchedule) {
+
+            if (this.parameters.isEnableCompression()) {
+                engine.addFilter(new GzipHttpFilter());
+            }
+
+            engine.addFilter(new ChunkedTransferHttpFilter());
+
+        }
 
         /* start engine threads */
         for (Engine engine : this.engineSchedule) {
@@ -120,6 +140,7 @@ public class Server implements Runnable {
 
                         SelectableChannel channel = key.channel();
                         Engine engine = (Engine)key.attachment();
+
 
                         // attach the engine the selection key for later.
                         if (engine == null) {

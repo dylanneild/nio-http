@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -67,7 +68,7 @@ public class HttpSession extends Session {
      */
     public HttpSession(SocketChannel channel, Selector selector, Parameters parameters) {
         super(channel, selector, parameters);
-        this.readBuffer = ByteBuffer.allocateDirect(1024);
+        this.readBuffer = ByteBuffer.allocateDirect(1460);
         this.resetHeaderReads();
     }
 
@@ -104,6 +105,7 @@ public class HttpSession extends Session {
 
         if (request != null) {
             this.requestQueue.add(request);
+            this.requestMap.put(request.getRequestId(), request);
         }
 
         return request;
@@ -198,7 +200,9 @@ public class HttpSession extends Session {
 
         if (this.writeBufferLastPacket) {
             if (this.writeRequest != null && this.writeRequest.isKeepAlive()) {
-                shouldClose = false;
+                if (this.writeResponse != null && !this.writeResponse.isConnectionClosed()) {
+                    shouldClose = false;
+                }
             }
         } else {
             shouldClose = false;
@@ -216,6 +220,16 @@ public class HttpSession extends Session {
     private final void socketWriteFullClear() throws ClosedChannelException {
 
         this.socketWritePartialClear();
+
+        if (this.writeResponse != null) {
+            if (this.writeResponse.getRequestId() >= 0) {
+                this.responseMap.remove(this.writeResponse.getRequestId());
+            }
+        }
+
+        if (this.writeRequest != null) {
+            this.requestMap.remove(this.writeRequest.getRequestId());
+        }
 
         this.writeRequest = null;
         this.writeResponse = null;
@@ -321,7 +335,19 @@ public class HttpSession extends Session {
 
     private final void socketWriteConvertResponseContent(ResponseContent responseContent) {
         this.writeBufferLastPacket = responseContent.isLastBufferForRequest();
-        this.writeBuffer = ByteBuffer.wrap(responseContent.getBuffer());
+
+        this.writeBuffer = ByteBuffer.allocate(responseContent.getTotalBufferSize());
+
+        if (responseContent.getHeaderBuffer() != null)
+            this.writeBuffer.put(responseContent.getHeaderBuffer());
+
+        if (responseContent.getBuffer() != null)
+            this.writeBuffer.put(responseContent.getBuffer());
+
+        if (responseContent.getFooterBuffer() != null)
+            this.writeBuffer.put(responseContent.getFooterBuffer());
+
+        this.writeBuffer.flip();
     }
 
     private final void socketWriteQueueAdditional() throws ClosedChannelException {
