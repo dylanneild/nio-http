@@ -152,9 +152,10 @@ public class Engine extends Thread {
                         response = ((ResponseContent)container).getReponse();
 
                         if (response == null) {
-                            System.out.println("No request found. Looking up.");
+                            System.out.println("Container lacks Response object hint");
                             response = session.getResponse(request.getRequestId());
                         }
+
                     }
 
                     // run any applicable filters
