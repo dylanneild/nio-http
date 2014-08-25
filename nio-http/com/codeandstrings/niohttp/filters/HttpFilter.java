@@ -8,5 +8,6 @@ public abstract class HttpFilter {
 
     public abstract boolean shouldFilter(Request request, Response response);
     public abstract void filter(Request request, ResponseMessage message);
+    public abstract void cleanup(long sessionId);
 
 }

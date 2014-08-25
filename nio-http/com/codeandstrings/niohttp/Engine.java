@@ -20,7 +20,10 @@ import com.codeandstrings.niohttp.wire.ChannelQueue;
 
 import java.io.IOException;
 import java.net.StandardSocketOptions;
-import java.nio.channels.*;
+import java.nio.channels.SelectableChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -61,6 +64,18 @@ public class Engine extends Thread {
 
     public void addFilter(HttpFilter filter) {
         this.filters.add(filter);
+    }
+
+    private void cleanupFilters(long sessionId) {
+        for (HttpFilter filter : this.filters) {
+            filter.cleanup(sessionId);
+        }
+    }
+
+    private void cleanupAndCloseSession(Session session) throws IOException {
+        this.sessions.remove(session.getSessionId());
+        this.cleanupFilters(session.getSessionId());
+        session.getChannel().close();
     }
 
     private void executeChannelReadFromServer(SelectableChannel channel) throws IOException {
@@ -104,8 +119,7 @@ public class Engine extends Thread {
             }
 
         } catch (CloseConnectionException e) {
-            this.sessions.remove(session.getSessionId());
-            session.getChannel().close();
+            this.cleanupAndCloseSession(session);
         } catch (HttpException e) {
             Response r = (new ExceptionResponseFactory(e)).create(session.getSessionId(), this.parameters);
             session.queueMessage(r);
@@ -178,8 +192,7 @@ public class Engine extends Thread {
             try {
                 session.socketWriteEvent();
             } catch (Exception e) {
-                this.sessions.remove(session.getSessionId());
-                session.getChannel().close();
+                this.cleanupAndCloseSession(session);
             }
         }
         else  {

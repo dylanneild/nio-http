@@ -15,6 +15,9 @@ public class ChunkedTransferHttpFilter extends HttpFilter {
     private static final byte[] terminator = { 13, 10  };
 
     @Override
+    public void cleanup(long sessionId) {}
+
+    @Override
     public boolean shouldFilter(Request request, Response response) {
 
         if (response.getHeaderCaseInsensitive("content-length") != null) {

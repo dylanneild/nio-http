@@ -12,6 +12,7 @@ import com.codeandstrings.niohttp.exceptions.InsufficientConcurrencyException;
 import com.codeandstrings.niohttp.exceptions.InvalidHandlerException;
 import com.codeandstrings.niohttp.filters.HttpFilter;
 import com.codeandstrings.niohttp.filters.impl.ChunkedTransferHttpFilter;
+import com.codeandstrings.niohttp.filters.impl.GzipHttpFilter;
 
 public class Server implements Runnable {
 
@@ -85,7 +86,13 @@ public class Server implements Runnable {
 
         /* Add mandatory filters */
         for (Engine engine : this.engineSchedule) {
+
+            if (this.parameters.isEnableCompression()) {
+                engine.addFilter(new GzipHttpFilter());
+            }
+
             engine.addFilter(new ChunkedTransferHttpFilter());
+
         }
 
         /* start engine threads */

@@ -8,6 +8,7 @@ public class Parameters {
 	private int maximumPostSize;
     private int connectionBacklog;
     private boolean tcpNoDelay;
+    private boolean enableCompression;
 
     public Parameters copy() {
         Parameters r = new Parameters();
@@ -17,6 +18,7 @@ public class Parameters {
         r.maximumPostSize = this.maximumPostSize;
         r.connectionBacklog = this.connectionBacklog;
         r.tcpNoDelay = this.tcpNoDelay;
+        r.enableCompression = this.enableCompression;
         return r;
     }
 
@@ -27,6 +29,7 @@ public class Parameters {
 		this.maximumPostSize = (8 * 1024 * 1024);
         this.connectionBacklog = 16 * 1024;
         this.tcpNoDelay = true;
+        this.enableCompression = true;
 	}
 
 	public static Parameters getDefaultParameters() {
@@ -48,6 +51,10 @@ public class Parameters {
 
     public void setTcpNoDelay(boolean tcpNoDelay) {
         this.tcpNoDelay = tcpNoDelay;
+    }
+
+    public void setConnectionBacklog(int connectionBacklog) {
+        this.connectionBacklog = connectionBacklog;
     }
 
     public int getConnectionBacklog() {
@@ -86,6 +93,14 @@ public class Parameters {
 		this.maximumPostSize = maximumPostSize;
 	}
 
+    public boolean isEnableCompression() {
+        return enableCompression;
+    }
+
+    public void setEnableCompression(boolean enableCompression) {
+        this.enableCompression = enableCompression;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -93,8 +108,11 @@ public class Parameters {
 
         Parameters that = (Parameters) o;
 
+        if (connectionBacklog != that.connectionBacklog) return false;
+        if (enableCompression != that.enableCompression) return false;
         if (maximumPostSize != that.maximumPostSize) return false;
         if (port != that.port) return false;
+        if (tcpNoDelay != that.tcpNoDelay) return false;
         if (serverIp != null ? !serverIp.equals(that.serverIp) : that.serverIp != null) return false;
         if (serverString != null ? !serverString.equals(that.serverString) : that.serverString != null) return false;
 
@@ -107,6 +125,9 @@ public class Parameters {
         result = 31 * result + (serverString != null ? serverString.hashCode() : 0);
         result = 31 * result + (serverIp != null ? serverIp.hashCode() : 0);
         result = 31 * result + maximumPostSize;
+        result = 31 * result + connectionBacklog;
+        result = 31 * result + (tcpNoDelay ? 1 : 0);
+        result = 31 * result + (enableCompression ? 1 : 0);
         return result;
     }
 
@@ -117,6 +138,9 @@ public class Parameters {
                 ", serverString='" + serverString + '\'' +
                 ", serverIp='" + serverIp + '\'' +
                 ", maximumPostSize=" + maximumPostSize +
+                ", connectionBacklog=" + connectionBacklog +
+                ", tcpNoDelay=" + tcpNoDelay +
+                ", enableCompression=" + enableCompression +
                 '}';
     }
 }
