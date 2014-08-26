@@ -73,7 +73,6 @@ public class Engine extends Thread {
 
     private void cleanupAndCloseSession(Session session) throws IOException {
         this.cleanupFilters(session.getSessionId());
-        session.setSessionFinished(true);
         session.getChannel().close();
     }
 
@@ -108,6 +107,7 @@ public class Engine extends Thread {
                 RequestHandler requestHandler = this.requestHandlerBroker.getHandlerForRequest(request);
 
                 if (requestHandler == null) {
+                    System.out.println("Never made it.");
                     session.removeRequest(request);
                     throw new NotFoundException();
                 } else {
@@ -126,14 +126,12 @@ public class Engine extends Thread {
 
     private void executeChannelReadFromHandler(SelectionKey key, SelectableChannel channel) throws IOException {
         // response is from a handler
-        RequestHandler handler = (RequestHandler) key.attachment();
+        ChannelQueue queue = (ChannelQueue) key.attachment();
 
-        if (handler == null) {
-            handler = this.requestHandlerBroker.getHandlerForEngineReceive(channel);
-            key.attach(handler);
+        if (queue == null) {
+            queue = this.requestHandlerBroker.getHandlerForEngineReceive(channel).getEngineQueue();
+            key.attach(queue);
         }
-
-        ChannelQueue queue = handler.getEngineQueue();
 
         if (queue.shouldReadObject()) {
             ResponseMessage container = (ResponseMessage)queue.getNextObject();
@@ -166,11 +164,8 @@ public class Engine extends Thread {
                                 filter.filter(request, container);
                         }
 
-                        if (!session.isSessionFinished()) {
-                            session.queueMessage(container);
-                        } else {
-                            System.out.println("Session closed?");
-                        }
+                        session.queueMessage(container);
+
                     }
                 }
             }
@@ -196,7 +191,7 @@ public class Engine extends Thread {
 
         if (channel instanceof SocketChannel) {
 
-            HttpSession session = (HttpSession) key.attachment();
+            Session session = (Session) key.attachment();
 
             try {
                 session.socketWriteEvent();
@@ -205,7 +200,14 @@ public class Engine extends Thread {
             }
         }
         else  {
-            this.requestHandlerBroker.getHandlerForEngineSend(channel).getHandlerQueue().sendObject(null);
+
+            ChannelQueue queue = (ChannelQueue) key.attachment();
+
+            if (queue == null) {
+                queue = this.requestHandlerBroker.getHandlerForEngineSend(channel).getHandlerQueue();
+            }
+
+            queue.sendObject(null);
         }
 
     }

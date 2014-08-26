@@ -10,7 +10,11 @@ import java.util.Set;
 
 public class DebugRootHandler extends StringRequestHandler {
 
-    private static int hits = 0;
+    private volatile static int hits = 0;
+
+    public static synchronized void up() {
+        hits++;
+    }
 
     public DebugRootHandler() throws HandlerInitException {
         super();
@@ -19,7 +23,7 @@ public class DebugRootHandler extends StringRequestHandler {
     @Override
     public String handleRequest(Request request) {
 
-        hits++;
+        up();
 
         StringBuilder r = new StringBuilder();
 
