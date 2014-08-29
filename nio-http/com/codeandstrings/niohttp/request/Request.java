@@ -1,7 +1,6 @@
 package com.codeandstrings.niohttp.request;
 
 import java.io.*;
-import java.lang.ref.WeakReference;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.util.ArrayList;
@@ -20,7 +19,7 @@ import com.codeandstrings.niohttp.sessions.Session;
 
 public class Request {
 
-    private WeakReference<Session> session;
+    private Session session;
     private long requestId;
     private long timestamp;
 	private String remoteAddr;
@@ -37,7 +36,7 @@ public class Request {
 
 		Request r = new Request();
 
-        r.session = new WeakReference<>(session);
+        r.session = session;
         r.requestId = requestId;
         r.timestamp = System.currentTimeMillis();
 		r.remoteAddr = remoteAddr;
@@ -244,7 +243,7 @@ public class Request {
     }
 
     public Session getSession() {
-        return session == null ? null : session.get();
+        return session;
     }
 
     public Parameters getServerParameters() {

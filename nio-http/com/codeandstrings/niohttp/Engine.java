@@ -25,10 +25,7 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 public class Engine extends Thread {
 
@@ -37,11 +34,13 @@ public class Engine extends Thread {
     private List<HttpFilter> filters;
     private ChannelQueue channelQueue;
     private Selector selector;
+    private HashSet<Session> sessions;
 
 	public Engine(Parameters parameters) throws EngineInitException {
 
         this.parameters = parameters.copy();
         this.filters = new ArrayList<>();
+        this.sessions = new HashSet<>();
 
         try {
             this.selector = Selector.open();
@@ -73,6 +72,7 @@ public class Engine extends Thread {
 
     private void cleanupAndCloseSession(Session session) throws IOException {
         this.cleanupFilters(session.getSessionId());
+        this.sessions.remove(session);
         session.getChannel().close();
     }
 
@@ -95,6 +95,7 @@ public class Engine extends Thread {
 
         if (session == null) {
             session = new HttpSession((SocketChannel) channel, this.selector, this.parameters);
+            sessions.add(session);
             key.attach(session);
         }
 
@@ -107,9 +108,8 @@ public class Engine extends Thread {
                 RequestHandler requestHandler = this.requestHandlerBroker.getHandlerForRequest(request);
 
                 if (requestHandler == null) {
-                    System.out.println("Never made it.");
-                    session.removeRequest(request);
-                    throw new NotFoundException();
+                    Response ex = (new ExceptionResponseFactory(new NotFoundException())).create(request);
+                    session.queueMessage(ex);
                 } else {
                     requestHandler.getHandlerQueue().sendObject(request);
                 }
@@ -134,41 +134,39 @@ public class Engine extends Thread {
         }
 
         if (queue.shouldReadObject()) {
+
             ResponseMessage container = (ResponseMessage)queue.getNextObject();
+            Request request = container == null ? null : container.getRequest();
+            Session session = request == null ? null : request.getSession();
 
-            if (container != null) {
-                Session session = container.getRequest().getSession();
+            if (container == null || request == null || session == null) {
+                System.err.println("Unusual situation: received object lacks reference chain:");
+                Thread.dumpStack();
+                return;
+            }
 
-                if (session != null) {
+            Response response = null;
 
-                    Request request = container.getRequest();
-                    Response response = null;
+            if (container instanceof Response) {
+                response = (Response) container;
+            } else {
+                response = ((ResponseContent) container).getReponse();
 
-                    if (container instanceof Response) {
-                        response = (Response)container;
-                    } else {
-
-                        response = ((ResponseContent)container).getReponse();
-
-                        if (response == null) {
-                            System.out.println("Container lacks Response object hint");
-                            response = session.getResponse(request.getRequestId());
-                        }
-
-                    }
-
-                    // run any applicable filters
-                    if (request != null && response != null) {
-                        for (HttpFilter filter : this.filters) {
-                            if (filter.shouldFilter(request, response))
-                                filter.filter(request, container);
-                        }
-
-                        session.queueMessage(container);
-
-                    }
+                if (response == null) {
+                    response = session.getResponse(request.getRequestId());
                 }
             }
+
+            // run any applicable filters
+            if (request != null && response != null) {
+                for (HttpFilter filter : this.filters) {
+                    if (filter.shouldFilter(request, response))
+                        filter.filter(request, container);
+                }
+
+                session.queueMessage(container);
+            }
+
         }
     }
 

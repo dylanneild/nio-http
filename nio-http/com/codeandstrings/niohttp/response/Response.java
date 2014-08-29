@@ -1,6 +1,5 @@
 package com.codeandstrings.niohttp.response;
 
-import java.lang.ref.WeakReference;
 import java.nio.charset.Charset;
 
 import com.codeandstrings.niohttp.data.HeaderValues;
@@ -10,7 +9,7 @@ import com.codeandstrings.niohttp.request.Request;
 
 public class Response implements ResponseMessage {
 
-    private WeakReference<Request> request;
+    private Request request;
     private long sessionId;
 
     private boolean bodyIncluded;
@@ -37,12 +36,12 @@ public class Response implements ResponseMessage {
 
 	public Response(Request request) {
         this.configureFromConstructor(request.getSession().getSessionId(), request.getRequestProtocol(), request.getRequestMethod());
-        this.request = new WeakReference<>(request);
+        this.request = request;
 	}
 
     @Override
     public Request getRequest() {
-        return request == null ? null : request.get();
+        return request;
     }
 
     public boolean isBodyIncluded() {
