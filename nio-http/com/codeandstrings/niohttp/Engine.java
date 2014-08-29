@@ -139,8 +139,14 @@ public class Engine extends Thread {
             Request request = container == null ? null : container.getRequest();
             Session session = request == null ? null : request.getSession();
 
-            if (container == null || request == null || session == null) {
+            if (container == null)
+                return;
+
+            if (request == null || session == null) {
                 System.err.println("Unusual situation: received object lacks reference chain:");
+                if (container==null) { System.err.println("Container null."); }
+                if (request==null) { System.err.println("Request null."); }
+                if (session==null) { System.err.println("Session null."); }
                 Thread.dumpStack();
                 return;
             }
