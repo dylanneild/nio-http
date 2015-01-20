@@ -1,4 +1,4 @@
-<project name="CafeWare" default="help">
+<project name="nio-http" default="help">
 
 	<description>NIO-HTTP Build Project</description>
 
