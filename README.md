@@ -51,10 +51,6 @@ Then, pass the Class to the server library:
         
     }
 
-### Example Server
-
-Demo code is [up and running](http://sky.codeandstrings.com) and demonstrates the library available and handling requests in it's current state.  
-
 ### Performance
 
 For basic file serving performance, serving the same file (the Apache index.html file included in Ubuntu), NIO-HTTP compares favourably with major HTTP server implementations.
