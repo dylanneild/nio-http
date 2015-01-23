@@ -279,7 +279,7 @@ public class GzipHttpFilter extends HttpFilter {
 
                 this.bufferMap.put(request.getRequestId(), output);
                 this.compressorMap.put(request.getRequestId(), compressor);
-                this.sessionMap.put(request.getSessionId(), request.getRequestId());
+                this.sessionMap.put(request.getSession().getSessionId(), request.getRequestId());
             }
             catch (Exception e) {
                 e.printStackTrace();

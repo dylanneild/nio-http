@@ -106,7 +106,11 @@ public abstract class FileSystemRequestHandler extends BaseFileSystemRequestHand
             r.append(directoryMember.getName());
         }
 
-        r.append("\">");
+        if (directoryMember.isDirectory() && !directoryMember.getName().endsWith("/")) {
+            r.append("/");
+        }
+
+            r.append("\">");
         r.append(directoryMember.getName());
         r.append("</a>");
         r.append("</td></tr>");

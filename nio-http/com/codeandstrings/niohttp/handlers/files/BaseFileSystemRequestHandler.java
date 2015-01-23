@@ -116,7 +116,9 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
             Response r = ResponseFactory.createStreamingResponse("text/html", request);
             byte headerBytes[] = this.getDirectoryHeader(request).getBytes(Charset.forName("UTF-8"));
-            ResponseContent directoryHeader = new ResponseContent(request.getSessionId(), request.getRequestId(), headerBytes, false);
+            ResponseContent directoryHeader = new ResponseContent(request, headerBytes, false);
+
+            directoryHeader.setResponse(r);
 
             this.engineQueue.sendObject(r);
             this.engineQueue.sendObject(directoryHeader);
@@ -124,12 +126,14 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             DirectoryRequestObject task = new DirectoryRequestObject(this.mimeTypes, path, request);
 
             if (task.hasNextMember()) {
+                task.setResponse(r);
                 tasks.add(task);
             } else {
 
                 // no files in the directory anyways...
                 byte footerBytes[] = this.getDirectoryFooter(request).getBytes(Charset.forName("UTF-8"));
-                ResponseContent directoryFooter = new ResponseContent(request.getSessionId(), request.getRequestId(), footerBytes, true);
+                ResponseContent directoryFooter = new ResponseContent(request, footerBytes, true);
+                directoryFooter.setResponse(r);
                 this.engineQueue.sendObject(directoryFooter);
 
             }
@@ -180,6 +184,7 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             task.close();
         } else {
             try {
+                task.setResponse(r);
                 task.readNextBuffer();
                 this.tasks.add(task);
             } catch (Exception e) {
@@ -234,8 +239,8 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
             nextBuffer.get(content);
 
             // we have a buffer to send and we know it
-            ResponseContent responseContent = new ResponseContent(task.getSessionId(),
-                    task.getRequestId(), content, finalBuffer);
+            ResponseContent responseContent = new ResponseContent(task.getRequest(), content, finalBuffer);
+            responseContent.setResponse(task.getResponse());
 
             this.getEngineQueue().sendObject(responseContent);
 
@@ -263,7 +268,8 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
             // this is not a hidden file
             byte listingContentsBytes[] = listingContents.getBytes(Charset.forName("UTF-8"));
-            ResponseContent r = new ResponseContent(request.getSessionId(), request.getRequestId(), listingContentsBytes, false);
+            ResponseContent r = new ResponseContent(request, listingContentsBytes, false);
+            r.setResponse(task.getResponse());
             this.getEngineQueue().sendObject(r);
 
         }
@@ -277,7 +283,8 @@ public abstract class BaseFileSystemRequestHandler extends RequestHandler {
 
             String directoryFooter = this.getDirectoryFooter(request);
             byte directoryFooterBytes[] = directoryFooter.getBytes(Charset.forName("UTF-8"));
-            ResponseContent r = new ResponseContent(request.getSessionId(), request.getRequestId(), directoryFooterBytes, true);
+            ResponseContent r = new ResponseContent(request, directoryFooterBytes, true);
+            r.setResponse(task.getResponse());
             this.getEngineQueue().sendObject(r);
 
         }

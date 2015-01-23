@@ -4,7 +4,6 @@ import java.util.Date;
 
 import com.codeandstrings.niohttp.data.DateUtils;
 import com.codeandstrings.niohttp.enums.HttpProtocol;
-import com.codeandstrings.niohttp.enums.RequestMethod;
 import com.codeandstrings.niohttp.exceptions.http.HttpException;
 import com.codeandstrings.niohttp.request.Request;
 

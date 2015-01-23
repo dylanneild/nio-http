@@ -3,6 +3,7 @@ package com.codeandstrings.niohttp.handlers.files;
 import com.codeandstrings.niohttp.data.DirectoryMember;
 import com.codeandstrings.niohttp.data.mime.MimeTypes;
 import com.codeandstrings.niohttp.request.Request;
+import com.codeandstrings.niohttp.response.Response;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -15,6 +16,7 @@ public class DirectoryRequestObject {
 
     private MimeTypes mimeTypes;
     private Request request;
+    private Response response;
     private DirectoryStream<Path> stream;
     private Iterator<Path> streamIterator;
 
@@ -31,6 +33,14 @@ public class DirectoryRequestObject {
 
     public Request getRequest() {
         return request;
+    }
+
+    public Response getResponse() {
+        return response;
+    }
+
+    public void setResponse(Response response) {
+        this.response = response;
     }
 
     public boolean hasNextMember() {

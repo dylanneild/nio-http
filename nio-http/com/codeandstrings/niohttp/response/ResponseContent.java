@@ -1,21 +1,30 @@
 package com.codeandstrings.niohttp.response;
 
+import com.codeandstrings.niohttp.request.Request;
+
 import java.util.Arrays;
 
 public class ResponseContent implements ResponseMessage {
 
-    private long sessionId;
-    private long requestId;
+    private Request request;
+    private Response response;
     private boolean lastBufferForRequest;
 	private byte[] buffer;
     private byte[] headerBuffer;
     private byte[] footerBuffer;
 
-    public ResponseContent(long sessionId, long requestId, byte[] buffer, boolean lastBufferForRequest) {
-        this.sessionId = sessionId;
-        this.requestId = requestId;
+    public ResponseContent(Request request, byte[] buffer, boolean lastBufferForRequest) {
+        this.request = request;
         this.lastBufferForRequest = lastBufferForRequest;
         this.buffer = buffer;
+    }
+
+    public Response getReponse() {
+        return this.response;
+    }
+
+    public void setResponse(Response response) {
+        this.response = response;
     }
 
     public byte[] getHeaderBuffer() {
@@ -42,20 +51,12 @@ public class ResponseContent implements ResponseMessage {
         this.buffer = buffer;
     }
 
-    public long getSessionId() {
-        return sessionId;
+    public Request getRequest() {
+        return request;
     }
 
-    public void setSessionId(long sessionId) {
-        this.sessionId = sessionId;
-    }
-
-    public long getRequestId() {
-        return requestId;
-    }
-
-    public void setRequestId(long requestId) {
-        this.requestId = requestId;
+    public void setRequest(Request request) {
+        this.request = request;
     }
 
     public boolean isLastBufferForRequest() {
@@ -81,19 +82,19 @@ public class ResponseContent implements ResponseMessage {
         ResponseContent that = (ResponseContent) o;
 
         if (lastBufferForRequest != that.lastBufferForRequest) return false;
-        if (requestId != that.requestId) return false;
-        if (sessionId != that.sessionId) return false;
         if (!Arrays.equals(buffer, that.buffer)) return false;
         if (!Arrays.equals(footerBuffer, that.footerBuffer)) return false;
         if (!Arrays.equals(headerBuffer, that.headerBuffer)) return false;
+        if (request != null ? !request.equals(that.request) : that.request != null) return false;
+        if (response != null ? !response.equals(that.response) : that.response != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = (int) (sessionId ^ (sessionId >>> 32));
-        result = 31 * result + (int) (requestId ^ (requestId >>> 32));
+        int result = request != null ? request.hashCode() : 0;
+        result = 31 * result + (response != null ? response.hashCode() : 0);
         result = 31 * result + (lastBufferForRequest ? 1 : 0);
         result = 31 * result + (buffer != null ? Arrays.hashCode(buffer) : 0);
         result = 31 * result + (headerBuffer != null ? Arrays.hashCode(headerBuffer) : 0);
@@ -104,8 +105,8 @@ public class ResponseContent implements ResponseMessage {
     @Override
     public String toString() {
         return "ResponseContent{" +
-                "sessionId=" + sessionId +
-                ", requestId=" + requestId +
+                "request=" + request +
+                ", response=" + response +
                 ", lastBufferForRequest=" + lastBufferForRequest +
                 ", buffer=" + Arrays.toString(buffer) +
                 ", headerBuffer=" + Arrays.toString(headerBuffer) +

@@ -23,6 +23,7 @@ public abstract class Session {
      */
     protected static long lastSessionId = 0;
     protected long sessionId;
+
     /*
      * Our channel and selector
      */
@@ -81,7 +82,6 @@ public abstract class Session {
         return this.channel;
     }
 
-
     protected void setSelectionRequest(boolean write)
             throws ClosedChannelException {
 
@@ -99,14 +99,19 @@ public abstract class Session {
 
     public void queueMessage(ResponseMessage message) throws IOException {
 
+        if (this.channel == null)
+            return;
+
+        if (!this.channel.isOpen() || !this.channel.isConnected())
+            return;
+
         if (message instanceof Response) {
 
             Response response = (Response)message;
-
             this.responseQueue.add(response);
 
-            if (response.getRequestId() >= 0) {
-                this.responseMap.put(response.getRequestId(), response);
+            if (response.getRequest() != null) {
+                this.responseMap.put(response.getRequest().getRequestId(), response);
             }
 
         } else {
@@ -114,7 +119,6 @@ public abstract class Session {
         }
 
         this.setSelectionRequest(true);
-
     }
 
     public void removeRequest(Request request) {

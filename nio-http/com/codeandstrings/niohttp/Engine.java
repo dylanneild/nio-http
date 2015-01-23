@@ -13,6 +13,7 @@ import com.codeandstrings.niohttp.handlers.broker.RequestHandlerBroker;
 import com.codeandstrings.niohttp.request.Request;
 import com.codeandstrings.niohttp.response.ExceptionResponseFactory;
 import com.codeandstrings.niohttp.response.Response;
+import com.codeandstrings.niohttp.response.ResponseContent;
 import com.codeandstrings.niohttp.response.ResponseMessage;
 import com.codeandstrings.niohttp.sessions.HttpSession;
 import com.codeandstrings.niohttp.sessions.Session;
@@ -24,25 +25,22 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 public class Engine extends Thread {
 
 	private Parameters parameters;
-    private HashMap<Long,Session> sessions;
     private RequestHandlerBroker requestHandlerBroker;
     private List<HttpFilter> filters;
     private ChannelQueue channelQueue;
     private Selector selector;
+    private HashSet<Session> sessions;
 
 	public Engine(Parameters parameters) throws EngineInitException {
 
         this.parameters = parameters.copy();
-        this.sessions = new HashMap<Long,Session>();
         this.filters = new ArrayList<>();
+        this.sessions = new HashSet<>();
 
         try {
             this.selector = Selector.open();
@@ -73,8 +71,8 @@ public class Engine extends Thread {
     }
 
     private void cleanupAndCloseSession(Session session) throws IOException {
-        this.sessions.remove(session.getSessionId());
         this.cleanupFilters(session.getSessionId());
+        this.sessions.remove(session);
         session.getChannel().close();
     }
 
@@ -97,7 +95,7 @@ public class Engine extends Thread {
 
         if (session == null) {
             session = new HttpSession((SocketChannel) channel, this.selector, this.parameters);
-            this.sessions.put(session.getSessionId(), session);
+            sessions.add(session);
             key.attach(session);
         }
 
@@ -110,8 +108,8 @@ public class Engine extends Thread {
                 RequestHandler requestHandler = this.requestHandlerBroker.getHandlerForRequest(request);
 
                 if (requestHandler == null) {
-                    session.removeRequest(request);
-                    throw new NotFoundException();
+                    Response ex = (new ExceptionResponseFactory(new NotFoundException())).create(request);
+                    session.queueMessage(ex);
                 } else {
                     requestHandler.getHandlerQueue().sendObject(request);
                 }
@@ -128,43 +126,53 @@ public class Engine extends Thread {
 
     private void executeChannelReadFromHandler(SelectionKey key, SelectableChannel channel) throws IOException {
         // response is from a handler
-        RequestHandler handler = (RequestHandler) key.attachment();
+        ChannelQueue queue = (ChannelQueue) key.attachment();
 
-        if (handler == null) {
-            handler = this.requestHandlerBroker.getHandlerForEngineReceive(channel);
-            key.attach(handler);
+        if (queue == null) {
+            queue = this.requestHandlerBroker.getHandlerForEngineReceive(channel).getEngineQueue();
+            key.attach(queue);
         }
 
-        ChannelQueue queue = handler.getEngineQueue();
-
         if (queue.shouldReadObject()) {
+
             ResponseMessage container = (ResponseMessage)queue.getNextObject();
+            Request request = container == null ? null : container.getRequest();
+            Session session = request == null ? null : request.getSession();
 
-            if (container != null) {
-                Session session = this.sessions.get(container.getSessionId());
+            if (container == null)
+                return;
 
-                if (session != null) {
+            if (request == null || session == null) {
+                System.err.println("Unusual situation: received object lacks reference chain:");
+                if (container==null) { System.err.println("Container null."); }
+                if (request==null) { System.err.println("Request null."); }
+                if (session==null) { System.err.println("Session null."); }
+                Thread.dumpStack();
+                return;
+            }
 
-                    Request request = session.getRequest(container.getRequestId());
-                    Response response = null;
+            Response response = null;
 
-                    if (container instanceof  Response) {
-                        response = (Response)container;
-                    } else {
-                        response = session.getResponse(request.getRequestId());
-                    }
+            if (container instanceof Response) {
+                response = (Response) container;
+            } else {
+                response = ((ResponseContent) container).getReponse();
 
-                    // run any applicable filters
-                    if (request != null && response != null) {
-                        for (HttpFilter filter : this.filters) {
-                            if (filter.shouldFilter(request, response))
-                                filter.filter(request, container);
-                        }
-
-                        session.queueMessage(container);
-                    }
+                if (response == null) {
+                    response = session.getResponse(request.getRequestId());
                 }
             }
+
+            // run any applicable filters
+            if (request != null && response != null) {
+                for (HttpFilter filter : this.filters) {
+                    if (filter.shouldFilter(request, response))
+                        filter.filter(request, container);
+                }
+
+                session.queueMessage(container);
+            }
+
         }
     }
 
@@ -187,7 +195,7 @@ public class Engine extends Thread {
 
         if (channel instanceof SocketChannel) {
 
-            HttpSession session = (HttpSession) key.attachment();
+            Session session = (Session) key.attachment();
 
             try {
                 session.socketWriteEvent();
@@ -196,7 +204,14 @@ public class Engine extends Thread {
             }
         }
         else  {
-            this.requestHandlerBroker.getHandlerForEngineSend(channel).getHandlerQueue().sendObject(null);
+
+            ChannelQueue queue = (ChannelQueue) key.attachment();
+
+            if (queue == null) {
+                queue = this.requestHandlerBroker.getHandlerForEngineSend(channel).getHandlerQueue();
+            }
+
+            queue.sendObject(null);
         }
 
     }
